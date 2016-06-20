@@ -37,13 +37,14 @@ func (item SfItem) File() (SfFile, error) {
 
 type SfFolder struct {
 	SfItem
+	Name string `json:",omitempty"`
 }
 
 func (item SfItem) Folder() (SfFolder, error) {
 	if item.Id[0:2] != "fo" {
 		return SfFolder{}, errors.New("Not a folder")
 	}
-	return SfFolder{item}, nil
+	return SfFolder{SfItem: item}, nil
 }
 
 type SfItems struct {
@@ -62,9 +63,9 @@ func (sf SfAccount) ItemUrl(entity, id string) string {
 	return fmt.Sprintf("%v(%v)", sf.EntityUrl(entity), id)
 }
 
-func (sf SfLogin) CreateRequestShare() (SfShare, error) {
+func (sf SfLogin) CreateRequestShare(parentFolderId string) (SfShare, error) {
 	toCreate := SfShare{ShareType: "Request",
-		Parent: SfFolder{SfItem{Url: sf.ItemUrl("Items", "box")}}}
+		Parent: SfFolder{SfItem: SfItem{Url: sf.ItemUrl("Items", parentFolderId)}}}
 	return sf.CreateShare(toCreate)
 }
 
@@ -95,6 +96,9 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 		return SfShare{}, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
+	}
 
 	created := SfShare{}
 	err = json.NewDecoder(resp.Body).Decode(&created)
@@ -106,7 +110,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 }
 
 func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
-	toCreate := SfFolder{SfItem{FileName: name}}
+	toCreate := SfFolder{Name: name}
 
 	toSend, err := json.Marshal(toCreate)
 	if err != nil {
@@ -127,6 +131,9 @@ func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
 		return SfFolder{}, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
+	}
 
 	created := SfFolder{}
 	err = json.NewDecoder(resp.Body).Decode(&created)
@@ -151,6 +158,9 @@ func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(resp.Status)
+	}
 
 	items := SfItems{}
 	err = json.NewDecoder(resp.Body).Decode(&items)

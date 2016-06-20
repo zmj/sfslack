@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"time"
 )
 
 // "r737fd7880774cf98"
@@ -70,14 +72,53 @@ func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
 // /request/create
 func (s *Server) RequestCreate(wr http.ResponseWriter, req *http.Request) {
 	io.WriteString(wr, "req create\n")
+	channelName := "channel"
+	requestTime := NowString()
 	login := TestLogin()
-	share, err := login.CreateRequestShare()
+	fmt.Println("a")
+	slackFolder, err := login.FindOrCreateSlackFolder()
 	if err != nil {
-		io.WriteString(wr, "error\n")
+		io.WriteString(wr, "a error\n")
+		io.WriteString(wr, err.Error())
+		return
+	}
+	fmt.Println("b")
+	folderName := channelName + " " + requestTime
+	shareFolder, err := login.CreateFolder(folderName, slackFolder.Id)
+	if err != nil {
+		io.WriteString(wr, "b error\n")
+		io.WriteString(wr, err.Error())
+		return
+	}
+	fmt.Println("c")
+	share, err := login.CreateRequestShare(shareFolder.Id)
+	if err != nil {
+		io.WriteString(wr, "c error\n")
 		io.WriteString(wr, err.Error())
 		return
 	}
 	io.WriteString(wr, share.Uri)
+}
+
+func NowString() string {
+	return time.Now().Format("2006-01-02 03:04:05PM")
+}
+
+func (sf SfLogin) FindOrCreateSlackFolder() (SfFolder, error) {
+	home, err := sf.GetChildren("home")
+	if err != nil {
+		return SfFolder{}, err
+	}
+	for _, item := range home {
+		if item.FileName == ".slack" {
+			folder, err := item.Folder()
+			if err != nil {
+				return SfFolder{}, err
+			}
+			return folder, nil
+		}
+	}
+	return sf.CreateFolder(".slack", "home")
 }
 
 // /send/create
