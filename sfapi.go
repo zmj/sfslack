@@ -18,8 +18,9 @@ type SfShare struct {
 }
 
 type SfFile struct {
-	Id  string `json:",omitempty"`
-	Url string `json:"url,omitempty"`
+	Id       string `json:",omitempty"`
+	Url      string `json:"url,omitempty"`
+	FileName string `json:",omitempty"`
 }
 
 type SfFolder struct {

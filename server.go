@@ -63,7 +63,7 @@ func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 	for _, file := range files {
-		io.WriteString(wr, file.Id+"\n")
+		io.WriteString(wr, file.Id+file.FileName+"\n")
 	}
 }
 
