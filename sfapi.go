@@ -41,11 +41,22 @@ func (sf SfAccount) ItemUrl(entity, id string) string {
 func (sf SfLogin) CreateRequestShare() (SfShare, error) {
 	toCreate := SfShare{ShareType: "Request",
 		Parent: SfFolder{Url: sf.Account.ItemUrl("Items", "box")}}
+	return sf.CreateShare(toCreate)
+}
+
+func (sf SfLogin) CreateSendShare(fileIds []string) (SfShare, error) {
+	toCreate := SfShare{ShareType: "Send"}
+	for _, id := range fileIds {
+		toCreate.Items = append(toCreate.Items, SfFile{Url: sf.Account.ItemUrl("Items", id)})
+	}
+	return sf.CreateShare(toCreate)
+}
+
+func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	toSend, err := json.Marshal(toCreate)
 	if err != nil {
 		return SfShare{}, err
 	}
-
 	req, err := http.NewRequest(http.MethodPost,
 		sf.Account.EntityUrl("Shares"),
 		bytes.NewReader(toSend))
@@ -63,7 +74,9 @@ func (sf SfLogin) CreateRequestShare() (SfShare, error) {
 
 	created := SfShare{}
 	err = json.NewDecoder(resp.Body).Decode(&created)
+	if err != nil {
+		return SfShare{}, err
+	}
 
-	fmt.Println(created)
 	return created, nil
 }

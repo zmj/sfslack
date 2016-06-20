@@ -47,6 +47,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sfslack/request/", s.Request)
 	mux.HandleFunc("/sfslack/request/create", s.RequestCreate)
+	mux.HandleFunc("/sfslack/send/create", s.SendCreate)
 	return mux
 }
 
@@ -62,6 +63,20 @@ func (s *Server) RequestCreate(wr http.ResponseWriter, req *http.Request) {
 	io.WriteString(wr, "req create\n")
 	login := TestLogin()
 	share, err := login.CreateRequestShare()
+	if err != nil {
+		io.WriteString(wr, "error\n")
+		io.WriteString(wr, err.Error())
+		return
+	}
+	io.WriteString(wr, share.Uri)
+}
+
+// /send/create
+func (s *Server) SendCreate(wr http.ResponseWriter, req *http.Request) {
+	io.WriteString(wr, "send create\n")
+	login := TestLogin()
+	fileId := "fi9f7e97-9ac6-8093-32f5-ebb5530009cf"
+	share, err := login.CreateSendShare([]string{fileId})
 	if err != nil {
 		io.WriteString(wr, "error\n")
 		io.WriteString(wr, err.Error())
