@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -17,19 +18,36 @@ type SfShare struct {
 	Uri       string   `json:",omitempty"`
 }
 
-type SfFile struct {
+type SfItem struct {
 	Id       string `json:",omitempty"`
 	Url      string `json:"url,omitempty"`
 	FileName string `json:",omitempty"`
 }
 
-type SfFolder struct {
-	Id  string `json:",omitempty"`
-	Url string `json:"url,omitempty"`
+type SfFile struct {
+	SfItem
 }
 
-type SfFiles struct {
-	Items []SfFile `json:"value,omitempty"`
+func (item SfItem) File() (SfFile, error) {
+	if item.Id[0:2] != "fi" {
+		return SfFile{}, errors.New("Not a file")
+	}
+	return SfFile{item}, nil
+}
+
+type SfFolder struct {
+	SfItem
+}
+
+func (item SfItem) Folder() (SfFolder, error) {
+	if item.Id[0:2] != "fo" {
+		return SfFolder{}, errors.New("Not a folder")
+	}
+	return SfFolder{item}, nil
+}
+
+type SfItems struct {
+	Items []SfItem `json:"value,omitempty"`
 }
 
 func (sf SfAccount) BaseUrl() string {
@@ -46,14 +64,14 @@ func (sf SfAccount) ItemUrl(entity, id string) string {
 
 func (sf SfLogin) CreateRequestShare() (SfShare, error) {
 	toCreate := SfShare{ShareType: "Request",
-		Parent: SfFolder{Url: sf.Account.ItemUrl("Items", "box")}}
+		Parent: SfFolder{SfItem{Url: sf.ItemUrl("Items", "box")}}}
 	return sf.CreateShare(toCreate)
 }
 
 func (sf SfLogin) CreateSendShare(fileIds []string) (SfShare, error) {
 	toCreate := SfShare{ShareType: "Send"}
 	for _, id := range fileIds {
-		toCreate.Items = append(toCreate.Items, SfFile{Url: sf.Account.ItemUrl("Items", id)})
+		toCreate.Items = append(toCreate.Items, SfFile{SfItem{Url: sf.ItemUrl("Items", id)}})
 	}
 	return sf.CreateShare(toCreate)
 }
@@ -64,7 +82,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 		return SfShare{}, err
 	}
 	req, err := http.NewRequest(http.MethodPost,
-		sf.Account.EntityUrl("Shares"),
+		sf.EntityUrl("Shares"),
 		bytes.NewReader(toSend))
 	if err != nil {
 		return SfShare{}, err
@@ -87,9 +105,41 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	return created, nil
 }
 
-func (sf SfLogin) GetShareFiles(shareId string) ([]SfFile, error) {
+func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
+	toCreate := SfFolder{SfItem{FileName: name}}
+
+	toSend, err := json.Marshal(toCreate)
+	if err != nil {
+		return SfFolder{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost,
+		sf.ItemUrl("Items", parentFolderId)+"/Folder",
+		bytes.NewReader(toSend))
+	if err != nil {
+		return SfFolder{}, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	hc := http.Client{Jar: sf.Cookies}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return SfFolder{}, err
+	}
+	defer resp.Body.Close()
+
+	created := SfFolder{}
+	err = json.NewDecoder(resp.Body).Decode(&created)
+	if err != nil {
+		return SfFolder{}, err
+	}
+
+	return created, nil
+}
+
+func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
 	req, err := http.NewRequest(http.MethodGet,
-		sf.Account.ItemUrl("Shares", shareId)+"/Items",
+		sf.ItemUrl("Items", parentFolderId)+"/Children",
 		nil)
 	if err != nil {
 		return nil, err
@@ -102,7 +152,7 @@ func (sf SfLogin) GetShareFiles(shareId string) ([]SfFile, error) {
 	}
 	defer resp.Body.Close()
 
-	items := SfFiles{}
+	items := SfItems{}
 	err = json.NewDecoder(resp.Body).Decode(&items)
 	if err != nil {
 		return nil, err

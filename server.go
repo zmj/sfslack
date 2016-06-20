@@ -56,7 +56,7 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
 	io.WriteString(wr, "req\n")
 	login := TestLogin()
-	files, err := login.GetShareFiles(req.URL.String())
+	files, err := login.GetChildren("home")
 	if err != nil {
 		io.WriteString(wr, "error\n")
 		io.WriteString(wr, err.Error())

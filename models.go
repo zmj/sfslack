@@ -9,6 +9,6 @@ type SfAccount struct {
 }
 
 type SfLogin struct {
-	Account SfAccount
+	SfAccount
 	Cookies http.CookieJar
 }
