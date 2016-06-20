@@ -9,6 +9,17 @@ import (
 	"net/http/httputil"
 )
 
+type SfAccount struct {
+	Subdomain       string
+	AppControlPlane string
+	ApiControlPlane string
+}
+
+type SfLogin struct {
+	SfAccount
+	Cookies http.CookieJar
+}
+
 type SfShare struct {
 	Id        string   `json:",omitempty"`
 	Url       string   `json:"url,omitempty"`
@@ -97,7 +108,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
+		return SfShare{}, errors.New(resp.Status)
 	}
 
 	created := SfShare{}
@@ -132,7 +143,7 @@ func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
+		return SfFolder{}, errors.New(resp.Status)
 	}
 
 	created := SfFolder{}
