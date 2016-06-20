@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 )
 
 type SfShare struct {
@@ -24,6 +25,10 @@ type SfFile struct {
 type SfFolder struct {
 	Id  string `json:",omitempty"`
 	Url string `json:"url,omitempty"`
+}
+
+type SfFiles struct {
+	Items []SfFile `json:"value,omitempty"`
 }
 
 func (sf SfAccount) BaseUrl() string {
@@ -79,4 +84,37 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	}
 
 	return created, nil
+}
+
+func (sf SfLogin) GetShareFiles(shareId string) ([]SfFile, error) {
+	req, err := http.NewRequest(http.MethodGet,
+		sf.Account.ItemUrl("Shares", shareId)+"/Items",
+		nil)
+	if err != nil {
+		return nil, err
+	}
+
+	hc := http.Client{Jar: sf.Cookies}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	items := SfFiles{}
+	err = json.NewDecoder(resp.Body).Decode(&items)
+	if err != nil {
+		return nil, err
+	}
+
+	return items.Items, nil
+}
+
+func dbgReq(req *http.Request) {
+	reqRaw, _ := httputil.DumpRequestOut(req, true)
+	fmt.Println(string(reqRaw))
+}
+func dbgResp(resp *http.Response) {
+	respRaw, _ := httputil.DumpResponse(resp, true)
+	fmt.Println(string(respRaw))
 }

@@ -45,7 +45,7 @@ func TestLogin() SfLogin {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/sfslack/request/", s.Request)
+	mux.Handle("/sfslack/request/", http.StripPrefix("/sfslack/request/", http.HandlerFunc(s.Request)))
 	mux.HandleFunc("/sfslack/request/create", s.RequestCreate)
 	mux.HandleFunc("/sfslack/send/create", s.SendCreate)
 	return mux
@@ -55,7 +55,16 @@ func (s *Server) Handler() http.Handler {
 // /request/id/download
 func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
 	io.WriteString(wr, "req\n")
-	io.WriteString(wr, req.URL.String())
+	login := TestLogin()
+	files, err := login.GetShareFiles(req.URL.String())
+	if err != nil {
+		io.WriteString(wr, "error\n")
+		io.WriteString(wr, err.Error())
+		return
+	}
+	for _, file := range files {
+		io.WriteString(wr, file.Id+"\n")
+	}
 }
 
 // /request/create
