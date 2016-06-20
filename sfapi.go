@@ -4,27 +4,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
 type SfShare struct {
-	Id        string
-	url       string
-	ShareType string
-	Parent    SfFolder
-	Items     []SfFile
-	Uri       string
+	Id        string   `json:",omitempty"`
+	Url       string   `json:"url,omitempty"`
+	ShareType string   `json:",omitempty"`
+	Parent    SfFolder `json:",omitempty"`
+	Items     []SfFile `json:",omitempty"`
+	Uri       string   `json:",omitempty"`
 }
 
 type SfFile struct {
-	Id  string
-	url string
+	Id  string `json:",omitempty"`
+	Url string `json:"url,omitempty"`
 }
 
 type SfFolder struct {
-	Id  string
-	url string
+	Id  string `json:",omitempty"`
+	Url string `json:"url,omitempty"`
 }
 
 func (sf SfAccount) BaseUrl() string {
@@ -40,30 +39,31 @@ func (sf SfAccount) ItemUrl(entity, id string) string {
 }
 
 func (sf SfLogin) CreateRequestShare() (SfShare, error) {
-	toCreate := SfShare{Parent: SfFolder{url: sf.Account.ItemUrl("Items", "box")}}
+	toCreate := SfShare{ShareType: "Request",
+		Parent: SfFolder{Url: sf.Account.ItemUrl("Items", "box")}}
 	toSend, err := json.Marshal(toCreate)
 	if err != nil {
 		return SfShare{}, err
 	}
 
+	req, err := http.NewRequest(http.MethodPost,
+		sf.Account.EntityUrl("Shares"),
+		bytes.NewReader(toSend))
+	if err != nil {
+		return SfShare{}, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
 	hc := http.Client{Jar: sf.Cookies}
-	resp, err := hc.Post(sf.Account.EntityUrl("Share"), "application/json", bytes.NewReader(toSend))
+	resp, err := hc.Do(req)
 	if err != nil {
 		return SfShare{}, err
 	}
 	defer resp.Body.Close()
 
-	received := make([]byte, resp.ContentLength, resp.ContentLength)
-	_, err = io.ReadFull(resp.Body, received)
-	if err != nil {
-		return SfShare{}, err
-	}
-
 	created := SfShare{}
-	err = json.Unmarshal(received, &created)
-	if err != nil {
-		return SfShare{}, err
-	}
+	err = json.NewDecoder(resp.Body).Decode(&created)
 
+	fmt.Println(created)
 	return created, nil
 }
