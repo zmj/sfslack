@@ -93,7 +93,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	if err != nil {
 		return SfShare{}, err
 	}
-	req, err := http.NewRequest(http.MethodPost,
+	req, err := http.NewRequest("POST",
 		sf.EntityUrl("Shares"),
 		bytes.NewReader(toSend))
 	if err != nil {
@@ -128,7 +128,7 @@ func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
 		return SfFolder{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodPost,
+	req, err := http.NewRequest("POST",
 		sf.ItemUrl("Items", parentFolderId)+"/Folder",
 		bytes.NewReader(toSend))
 	if err != nil {
@@ -156,7 +156,7 @@ func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
 }
 
 func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
-	req, err := http.NewRequest(http.MethodGet,
+	req, err := http.NewRequest("GET",
 		sf.ItemUrl("Items", parentFolderId)+"/Children",
 		nil)
 	if err != nil {

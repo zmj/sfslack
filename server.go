@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"encoding/json"
 	"io"
 	"net/http"
+	"errors"
+	"net/url"
 )
 
 func main() {
@@ -20,21 +23,37 @@ type Server struct {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/sfslack/send", s.Send)
-	mux.HandleFunc("/sfslack/request", s.Request)
+	mux.HandleFunc("/sfslack/", s.Print)
+	mux.HandleFunc("/sfslack/send/", s.Send)
+	mux.HandleFunc("/sfslack/request/", s.Request)
 	return mux
 }
 
-func (s *Server) Send(wr http.ResponseWriter, req *http.Request) {
+func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
+	fmt.Println(req.URL.String())
 	dbgReq(req)
+	wr.Write([]byte("hello"))	
+}
 
-	err := req.ParseForm()
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusBadRequest)
-		return
-	}
+func ParseRequest(req *http.Request) (SlackCommand, error) {
+	var values url.Values
+	var err error
+	if req.Method == "GET" {
+		values = req.URL.Query()
+	} else if req.Method == "POST" {
+		err = req.ParseForm()
+		if err != nil {
+			return SlackCommand{}, err
+		}
+		values = req.Form	
+	} else {
+		return SlackCommand{}, errors.New("Unsupported HTTP method "+req.Method)
+}
+	return ParseCommand(values)
+}
 
-	cmd, err := ParseCommand(req.Form)
+func (s *Server) Send(wr http.ResponseWriter, req *http.Request) {
+	cmd, err := ParseRequest(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
@@ -51,15 +70,7 @@ func (s *Server) Send(wr http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
-	dbgReq(req)
-
-	err := req.ParseForm()
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	cmd, err := ParseCommand(req.Form)
+	cmd, err := ParseRequest(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
@@ -72,8 +83,13 @@ func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
 	}
 
 	message := cmd.User.Name + " is requesting files: " + url
-	response := SlackResponse{Text: message, ResponseType: "in_channel"}
+	content := SlackResponse{Text: message, ResponseType: "in_channel"}
+	toSend, err := json.Marshal(content)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	encoder := json.NewEncoder(wr)
-	err = encoder.Encode(response)
+	wr.Header().Add("Content-Type", "application/json")
+	wr.Write(toSend)
 }

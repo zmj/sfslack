@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"fmt"
 )
 
 type SlackCommand struct {
@@ -36,6 +37,7 @@ type SlackUser struct {
 }
 
 func ParseCommand(values url.Values) (SlackCommand, error) {
+	fmt.Println(values)
 	team := SlackTeam{
 		Id:     values.Get("team_id"),
 		Domain: values.Get("team_domain"),
@@ -79,7 +81,7 @@ func (cmd SlackCommand) Respond(message string, toChannel bool) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost,
+	req, err := http.NewRequest("POST",
 		cmd.ResponseUrl,
 		bytes.NewReader(toSend))
 	if err != nil {
