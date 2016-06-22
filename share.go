@@ -2,110 +2,104 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"time"
 )
 
 const (
-	slackFolderName   = ".slack"
-	nowFormat         = "2006-01-02 03:04:05PM"
-	maxSlackResponses = 5
+	slackFolderName = ".slack"
+	nowFormat       = "2006-01-02 03:04:05PM"
 )
 
-func TestLogin() SfLogin {
-	account := SfAccount{"jeffcombscom", "sharefile.com", "sf-api.com"}
-	authCookie := http.Cookie{
-		Name:  "SFAPI_AuthID",
-		Value: "421e60ff-7721-4002-a492-3060a3c594a4"}
-
-	cookieUrl, _ := url.Parse(account.BaseUrl())
-	jar, _ := cookiejar.New(nil)
-	jar.SetCookies(cookieUrl, []*http.Cookie{&authCookie})
-	return SfLogin{account, jar}
+type SlackWorkflow struct {
+	User      SlackUser
+	Responses chan SlackResponse
+	Quit      chan struct{}
 }
 
-func NewRequest(cmd SlackCommand) (string, error) {
-	poller, url, err := SetupRequestShare()
+func (sw SlackWorkflow) SendError(err error) {
+	fmt.Println("Notifying ", sw.User.Name, " error: ", err.Error())
+	sw.Responses <- SlackResponse{Text: "Error: " + err.Error()}
+}
+
+func (sw SlackWorkflow) Authenticate() SfLogin {
+	// send request, wait on it
+	return TestLogin()
+}
+
+func (sw SlackWorkflow) Request() {
+	defer close(sw.Responses)
+	sf := sw.Authenticate()
+	// what if quit while in auth? need to select quit/authreq
+	poller, url, err := SetupRequestShare(sf)
 	if err != nil {
-		return "", err
+		sw.SendError(err)
+		return
 	}
-	go func() {
-		defer close(poller.Quit)
-		sentResponses := 0
-	loop:
-		for {
-			select {
-			case <-time.After(30 * time.Minute):
-				break loop
-			case items, ok := <-poller.NewItems:
-				if !ok {
-					break loop
-				}
-				for _, item := range items {
-					message := item.FileName + " was sent to you."
-					err = cmd.Respond(message, false)
-					if err != nil {
-						fmt.Println(err.Error())
-					}
-					sentResponses += 1
-					if sentResponses == maxSlackResponses {
-						break loop
-					}
-				}
+	defer close(poller.Quit)
+	msg := SlackResponse{
+		Text:         sw.User.Name + " is requesting files: " + url,
+		ResponseType: "in_channel"}
+	sw.Responses <- msg
+	for {
+		select {
+		case <-sw.Quit:
+			return
+		case newItems, ok := <-poller.NewItems:
+			if !ok {
+				return
+			}
+			// consolidate to single msg
+			for _, item := range newItems {
+				sw.Responses <- SlackResponse{Text: item.FileName + " was sent to you."}
 			}
 		}
-	}()
-	return url, nil
-}
-
-func NewSend(cmd SlackCommand) (string, error) {
-	sf := TestLogin()
-	poller, url, err := SetupRequestShare()
-	if err != nil {
-		return "", err
 	}
-	// create send share for uploaded items
-	go func() {
-		defer close(poller.Quit)
-	loop:
-		for {
-			select {
-			case <-time.After(10 * time.Minute):
-				break loop
-			case items, ok := <-poller.NewItems:
-				if ok {
-					fileIds := make([]string, 0, 0)
-					for _, item := range items {
-						if file, err := item.File(); err == nil {
-							fileIds = append(fileIds, file.Id)
-						}
-					}
-					sendShare, err := sf.CreateSendShare(fileIds)
-					if err != nil {
-						fmt.Println("failed to create send share")
-						fmt.Println(err.Error())
-						break loop
-					}
-					message := cmd.User.Name + " has shared files: " + sendShare.Uri
-					err = cmd.Respond(message, true)
-					if err != nil {
-						fmt.Println("failed to notify of send share")
-						fmt.Println(err.Error())
-					}
-				}
-				break loop
-			}
-		}
-	}()
-	return url, nil
 }
 
-func SetupRequestShare() (*FolderPoller, string, error) {
+func (sw SlackWorkflow) Send() {
+	defer close(sw.Responses)
+	sf := sw.Authenticate()
+	// wrong, need to select here to exit cleanly? or signal quit?
+	poller, url, err := SetupRequestShare(sf)
+	if err != nil {
+		sw.SendError(err)
+		return
+	}
+	defer close(poller.Quit)
+	sw.Responses <- SlackResponse{Text: "Upload your files: " + url}
+	for {
+		select {
+		case <-sw.Quit:
+			return
+		case newItems, ok := <-poller.NewItems:
+			if !ok {
+				return
+			}
+			fileIds := make([]string, 0, 0)
+			for _, item := range newItems {
+				if file, err := item.File(); err == nil {
+					fileIds = append(fileIds, file.Id)
+				}
+			}
+			// 0 files?
+			sendShare, err := sf.CreateSendShare(fileIds)
+			if err != nil {
+				sw.SendError(err)
+				return
+			}
+			// list files
+			msg := SlackResponse{
+				Text:         sw.User.Name + " has shared files: " + sendShare.Uri,
+				ResponseType: "in_channel"}
+			sw.Responses <- msg
+			return
+		}
+	}
+}
+
+func SetupRequestShare(sf SfLogin) (*FolderPoller, string, error) {
 	channelName := "channel"
 	requestTime := time.Now().Format(nowFormat)
-	sf := TestLogin()
 	slackFolder, err := sf.FindOrCreateSlackFolder()
 	if err != nil {
 		return nil, "", err

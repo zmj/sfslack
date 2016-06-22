@@ -6,6 +6,12 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
+)
+
+const (
+	maxSlackResponses    = 5
+	maxSlackResponseTime = 30 * time.Minute
 )
 
 type SlackCommand struct {
@@ -35,7 +41,7 @@ type SlackUser struct {
 	Name string
 }
 
-func ParseCommand(values url.Values) (SlackCommand, error) {
+func NewCommand(values url.Values) (SlackCommand, error) {
 	team := SlackTeam{
 		Id:     values.Get("team_id"),
 		Domain: values.Get("team_domain"),
@@ -68,14 +74,18 @@ type SlackResponse struct {
 	ResponseType string `json:"response_type,omitempty"`
 }
 
-func (cmd SlackCommand) Respond(message string, toChannel bool) error {
-	response := SlackResponse{}
-	response.Text = message
-	if toChannel {
-		response.ResponseType = "in_channel"
+func (msg SlackResponse) WriteTo(wr http.ResponseWriter) {
+	toSend, err := json.Marshal(msg)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	wr.Header().Add("Content-Type", "application/json")
+	wr.Write(toSend)
+}
 
-	toSend, err := json.Marshal(response)
+func (msg SlackResponse) RespondTo(cmd SlackCommand) error {
+	toSend, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}

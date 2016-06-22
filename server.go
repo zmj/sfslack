@@ -1,12 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 func main() {
@@ -24,8 +23,8 @@ type Server struct {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sfslack/", s.Print)
-	mux.HandleFunc("/sfslack/send", s.Send)
-	mux.HandleFunc("/sfslack/request", s.Request)
+	mux.HandleFunc("/sfslack/send", s.SlackCommand)
+	mux.HandleFunc("/sfslack/request", s.SlackCommand)
 	return mux
 }
 
@@ -35,7 +34,7 @@ func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
 	wr.Write([]byte("hello"))
 }
 
-func ParseRequest(req *http.Request) (SlackCommand, error) {
+func ParseCommand(req *http.Request) (SlackCommand, error) {
 	var values url.Values
 	var err error
 	if req.Method == "GET" {
@@ -49,47 +48,46 @@ func ParseRequest(req *http.Request) (SlackCommand, error) {
 	} else {
 		return SlackCommand{}, errors.New("Unsupported HTTP method " + req.Method)
 	}
-	return ParseCommand(values)
+	return NewCommand(values)
 }
 
-func (s *Server) Send(wr http.ResponseWriter, req *http.Request) {
-	cmd, err := ParseRequest(req)
+func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
+	cmd, err := ParseCommand(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	url, err := NewSend(cmd)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusInternalServerError)
+	wf := SlackWorkflow{cmd.User, make(chan SlackResponse), make(chan struct{})}
+	switch cmd.Command {
+	case "sfsend":
+		wf.Send()
+	case "sfrequest":
+		wf.Request()
+	default:
+		http.Error(wr, "Unknown command", http.StatusBadRequest)
+		// leaked channels here - change flow
 		return
 	}
 
-	message := "Upload your files: " + url
-	io.WriteString(wr, message)
-}
-
-func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
-	cmd, err := ParseRequest(req)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	url, err := NewRequest(cmd)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	message := cmd.User.Name + " is requesting files: " + url
-	content := SlackResponse{Text: message, ResponseType: "in_channel"}
-	toSend, err := json.Marshal(content)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	wr.Header().Add("Content-Type", "application/json")
-	wr.Write(toSend)
+	firstResponse := <-wf.Responses
+	go func() {
+		defer close(wf.Quit)
+		for sent := 0; sent < maxSlackResponses; sent++ {
+			select {
+			case <-time.After(maxSlackResponseTime):
+				return
+			case msg, ok := <-wf.Responses:
+				if !ok {
+					return
+				}
+				err = msg.RespondTo(cmd)
+				if err != nil {
+					fmt.Println("Failed to send ", msg, err)
+					return
+				}
+			}
+		}
+	}()
+	firstResponse.WriteTo(wr)
 }
