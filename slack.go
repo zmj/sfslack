@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
-	"fmt"
 )
 
 type SlackCommand struct {
@@ -37,7 +37,11 @@ type SlackUser struct {
 }
 
 func ParseCommand(values url.Values) (SlackCommand, error) {
-	fmt.Println(values)
+	for k, vs := range values {
+		for _, v := range vs {
+			fmt.Println(k, " ", v)
+		}
+	}
 	team := SlackTeam{
 		Id:     values.Get("team_id"),
 		Domain: values.Get("team_domain"),

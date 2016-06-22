@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
-	"errors"
 	"net/url"
 )
 
@@ -24,15 +24,15 @@ type Server struct {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sfslack/", s.Print)
-	mux.HandleFunc("/sfslack/send/", s.Send)
-	mux.HandleFunc("/sfslack/request/", s.Request)
+	mux.HandleFunc("/sfslack/send", s.Send)
+	mux.HandleFunc("/sfslack/request", s.Request)
 	return mux
 }
 
 func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
 	fmt.Println(req.URL.String())
 	dbgReq(req)
-	wr.Write([]byte("hello"))	
+	wr.Write([]byte("hello"))
 }
 
 func ParseRequest(req *http.Request) (SlackCommand, error) {
@@ -45,10 +45,13 @@ func ParseRequest(req *http.Request) (SlackCommand, error) {
 		if err != nil {
 			return SlackCommand{}, err
 		}
-		values = req.Form	
+		values = req.PostForm
+		fmt.Println(req.ContentLength)
+		fmt.Print(req.Form)
+		fmt.Println(req.PostForm)
 	} else {
-		return SlackCommand{}, errors.New("Unsupported HTTP method "+req.Method)
-}
+		return SlackCommand{}, errors.New("Unsupported HTTP method " + req.Method)
+	}
 	return ParseCommand(values)
 }
 
