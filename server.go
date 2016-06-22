@@ -1,14 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 )
-
-// "r737fd7880774cf98"
-// https://jeffcombscom.sharefile.com/r-r737fd7880774cf98 (share.Uri)
-// jeffcombscom
-// sharefile.com
 
 func main() {
 	s := &Server{}
@@ -22,57 +18,62 @@ func main() {
 type Server struct {
 }
 
-// /request/create
-// /request/id/upload
-// /request/id/download
-// /send/create
-// /send/id/upload
-// /send/id/download
-
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/sfslack/request/", http.StripPrefix("/sfslack/request/", http.HandlerFunc(s.Request)))
-	mux.HandleFunc("/sfslack/request/create", s.RequestCreate)
-	mux.HandleFunc("/sfslack/send/create", s.SendCreate)
+	mux.HandleFunc("/sfslack/send", s.Send)
+	mux.HandleFunc("/sfslack/request", s.Request)
 	return mux
 }
 
-// /request/id/upload
-// /request/id/download
+func (s *Server) Send(wr http.ResponseWriter, req *http.Request) {
+	dbgReq(req)
+
+	err := req.ParseForm()
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cmd, err := ParseCommand(req.Form)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	url, err := NewSend(cmd)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	message := "Upload your files: " + url
+	io.WriteString(wr, message)
+}
+
 func (s *Server) Request(wr http.ResponseWriter, req *http.Request) {
-	io.WriteString(wr, "req\n")
-	login := TestLogin()
-	files, err := login.GetChildren("home")
-	if err != nil {
-		io.WriteString(wr, "error\n")
-		io.WriteString(wr, err.Error())
-		return
-	}
-	for _, file := range files {
-		io.WriteString(wr, file.Id+file.FileName+"\n")
-	}
-}
+	dbgReq(req)
 
-// /request/create
-func (s *Server) RequestCreate(wr http.ResponseWriter, req *http.Request) {
-	io.WriteString(wr, "req create\n")
-	url, err := NewRequest()
+	err := req.ParseForm()
 	if err != nil {
-		io.WriteString(wr, "error\n")
-		io.WriteString(wr, err.Error())
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-	io.WriteString(wr, url)
-}
 
-// /send/create
-func (s *Server) SendCreate(wr http.ResponseWriter, req *http.Request) {
-	io.WriteString(wr, "req create\n")
-	url, err := NewSend()
+	cmd, err := ParseCommand(req.Form)
 	if err != nil {
-		io.WriteString(wr, "error\n")
-		io.WriteString(wr, err.Error())
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-	io.WriteString(wr, url)
+
+	url, err := NewRequest(cmd)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	message := cmd.User.Name + " is requesting files: " + url
+	response := SlackResponse{Text: message, ResponseType: "in_channel"}
+
+	encoder := json.NewEncoder(wr)
+	err = encoder.Encode(response)
 }

@@ -9,15 +9,16 @@ import (
 )
 
 const (
-	slackFolderName = ".slack"
-	nowFormat       = "2006-01-02 03:04:05PM"
+	slackFolderName   = ".slack"
+	nowFormat         = "2006-01-02 03:04:05PM"
+	maxSlackResponses = 5
 )
 
 func TestLogin() SfLogin {
 	account := SfAccount{"jeffcombscom", "sharefile.com", "sf-api.com"}
 	authCookie := http.Cookie{
 		Name:  "SFAPI_AuthID",
-		Value: "2718f716-aee5-4e86-9c57-41e10f6be1ae"}
+		Value: "421e60ff-7721-4002-a492-3060a3c594a4"}
 
 	cookieUrl, _ := url.Parse(account.BaseUrl())
 	jar, _ := cookiejar.New(nil)
@@ -25,13 +26,14 @@ func TestLogin() SfLogin {
 	return SfLogin{account, jar}
 }
 
-func NewRequest() (string, error) {
+func NewRequest(cmd SlackCommand) (string, error) {
 	poller, url, err := SetupRequestShare()
 	if err != nil {
 		return "", err
 	}
 	go func() {
 		defer close(poller.Quit)
+		sentResponses := 0
 	loop:
 		for {
 			select {
@@ -42,8 +44,15 @@ func NewRequest() (string, error) {
 					break loop
 				}
 				for _, item := range items {
-					// send uploaded items as command responses
-					fmt.Println(item.Id + " " + item.FileName)
+					message := item.FileName + " was sent to you."
+					err = cmd.Respond(message, false)
+					if err != nil {
+						fmt.Println(err.Error())
+					}
+					sentResponses += 1
+					if sentResponses == maxSlackResponses {
+						break loop
+					}
 				}
 			}
 		}
@@ -51,7 +60,7 @@ func NewRequest() (string, error) {
 	return url, nil
 }
 
-func NewSend() (string, error) {
+func NewSend(cmd SlackCommand) (string, error) {
 	sf := TestLogin()
 	poller, url, err := SetupRequestShare()
 	if err != nil {
@@ -77,9 +86,14 @@ func NewSend() (string, error) {
 					if err != nil {
 						fmt.Println("failed to create send share")
 						fmt.Println(err.Error())
+						break loop
 					}
-					// broadcast send share url
-					fmt.Println(sendShare.Uri)
+					message := cmd.User.Name + " has shared files: " + sendShare.Uri
+					err = cmd.Respond(message, true)
+					if err != nil {
+						fmt.Println("failed to notify of send share")
+						fmt.Println(err.Error())
+					}
 				}
 				break loop
 			}
