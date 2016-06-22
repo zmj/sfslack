@@ -46,9 +46,6 @@ func ParseRequest(req *http.Request) (SlackCommand, error) {
 			return SlackCommand{}, err
 		}
 		values = req.PostForm
-		fmt.Println(req.ContentLength)
-		fmt.Print(req.Form)
-		fmt.Println(req.PostForm)
 	} else {
 		return SlackCommand{}, errors.New("Unsupported HTTP method " + req.Method)
 	}
