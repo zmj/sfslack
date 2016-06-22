@@ -80,10 +80,10 @@ func (sf SfLogin) CreateRequestShare(parentFolderId string) (SfShare, error) {
 	return sf.CreateShare(toCreate)
 }
 
-func (sf SfLogin) CreateSendShare(fileIds []string) (SfShare, error) {
+func (sf SfLogin) CreateSendShare(files []SfFile) (SfShare, error) {
 	toCreate := SfShare{ShareType: "Send"}
-	for _, id := range fileIds {
-		toCreate.Items = append(toCreate.Items, SfFile{SfItem{Url: sf.ItemUrl("Items", id)}})
+	for _, file := range files {
+		toCreate.Items = append(toCreate.Items, SfFile{SfItem{Url: sf.ItemUrl("Items", file.Id)}})
 	}
 	return sf.CreateShare(toCreate)
 }
@@ -180,6 +180,14 @@ func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
 	}
 
 	return items.Items, nil
+}
+
+func (sf SfLogin) DownloadAllUrl(shareId string) string {
+	return sf.ItemUrl("Shares", shareId) + "/Download"
+}
+
+func (sf SfLogin) DownloadUrl(shareId, fileId string) string {
+	return sf.ItemUrl("Shares", shareId) + "/Download(" + fileId + ")"
 }
 
 func dbgReq(req *http.Request) {

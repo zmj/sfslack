@@ -58,7 +58,7 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	wf := SlackWorkflow{cmd.User, make(chan SlackResponse), make(chan struct{})}
+	wf := SlackWorkflow{cmd.User, make(chan SlackMessage), make(chan struct{})}
 	switch cmd.Command {
 	case "/sfsend":
 		go wf.Send()
@@ -74,7 +74,7 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 		defer close(wf.Quit)
 		for sent := 0; sent < maxSlackResponses; sent++ {
 			select {
-			case <-time.After(maxSlackResponseTime):
+			case <-time.After(maxSlackMessageTime):
 				return
 			case msg, ok := <-wf.Responses:
 				if !ok {

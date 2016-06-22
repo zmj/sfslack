@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	maxSlackResponses    = 5
-	maxSlackResponseTime = 30 * time.Minute
+	maxSlackResponses   = 5
+	maxSlackMessageTime = 30 * time.Minute
 )
 
 type SlackCommand struct {
@@ -69,12 +69,18 @@ func NewCommand(values url.Values) (SlackCommand, error) {
 	return command, nil
 }
 
-type SlackResponse struct {
-	Text         string `json:"text"`
-	ResponseType string `json:"response_type,omitempty"`
+type SlackMessage struct {
+	Text         string            `json:"text"`
+	ResponseType string            `json:"response_type,omitempty"`
+	Attachments  []SlackAttachment `json:"attachments,omitempty"`
 }
 
-func (msg SlackResponse) WriteTo(wr http.ResponseWriter) {
+type SlackAttachment struct {
+	Fallback string `json:"fallback,omitempty"`
+	Text     string `json:"text,omitempty"`
+}
+
+func (msg SlackMessage) WriteTo(wr http.ResponseWriter) {
 	toSend, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusInternalServerError)
@@ -84,7 +90,7 @@ func (msg SlackResponse) WriteTo(wr http.ResponseWriter) {
 	wr.Write(toSend)
 }
 
-func (msg SlackResponse) RespondTo(cmd SlackCommand) error {
+func (msg SlackMessage) RespondTo(cmd SlackCommand) error {
 	toSend, err := json.Marshal(msg)
 	if err != nil {
 		return err
