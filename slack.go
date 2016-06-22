@@ -87,7 +87,6 @@ func (cmd SlackCommand) Respond(message string, toChannel bool) error {
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	dbgReq(req)
 	hc := http.Client{}
 	resp, err := hc.Do(req)
 	if err != nil {
