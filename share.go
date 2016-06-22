@@ -49,6 +49,7 @@ func (sw SlackWorkflow) Request() {
 				return
 			}
 			// consolidate to single msg
+			// download link?
 			for _, item := range newItems {
 				sw.Responses <- SlackResponse{Text: item.FileName + " was sent to you."}
 			}

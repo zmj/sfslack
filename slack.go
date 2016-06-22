@@ -104,7 +104,6 @@ func (msg SlackResponse) RespondTo(cmd SlackCommand) error {
 	}
 	defer resp.Body.Close()
 
-	dbgResp(resp)
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
 	}

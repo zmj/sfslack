@@ -60,16 +60,15 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 
 	wf := SlackWorkflow{cmd.User, make(chan SlackResponse), make(chan struct{})}
 	switch cmd.Command {
-	case "sfsend":
-		wf.Send()
-	case "sfrequest":
-		wf.Request()
+	case "/sfsend":
+		go wf.Send()
+	case "/sfrequest":
+		go wf.Request()
 	default:
 		http.Error(wr, "Unknown command", http.StatusBadRequest)
 		// leaked channels here - change flow
 		return
 	}
-
 	firstResponse := <-wf.Responses
 	go func() {
 		defer close(wf.Quit)
