@@ -8,7 +8,7 @@ import (
 
 const (
 	slackFolderName = ".slack"
-	nowFormat       = "2006-01-02 03:04:05PM" // change to 24hr for folder sort
+	nowFormat       = "2006-01-02 15:04:05"
 )
 
 type SlackWorkflow struct {
@@ -31,16 +31,18 @@ func (wf SlackWorkflow) Request() {
 	defer close(wf.Responses)
 	sf := wf.Authenticate()
 	// what if quit while in auth? need to select quit/authreq
-	poller, share, err := SetupRequestShare(sf)
+	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
 		wf.SendError(err)
 		return
 	}
-	defer close(poller.Quit)
 	msg := SlackMessage{
 		Text:         wf.User.Name + " is requesting files: " + share.Uri,
 		ResponseType: "in_channel"}
 	wf.Responses <- msg
+	poller := sf.FolderPoller(folder.Id)
+	go poller.PollForRequest()
+	defer close(poller.Quit)
 	for {
 		select {
 		case <-wf.Quit:
@@ -58,17 +60,22 @@ func (wf SlackWorkflow) Request() {
 			if len(files) == 0 {
 				continue
 			}
-			wf.Responses <- share.BuildRequestNotification(files)
+			sendShare, err := sf.CreateSendShare(files)
+			if err != nil {
+				wf.SendError(err)
+				continue
+			}
+			wf.Responses <- sendShare.BuildRequestNotification(files)
 		}
 	}
 }
 
-func (requestShare SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
+func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
 	var msg SlackMessage
 	if len(files) == 1 {
-		msg.Text = "Received " + files[0].FileName + ": " + requestShare.DownloadUrl(files[0].Id)
+		msg.Text = "Received " + files[0].FileName + ": " + share.DownloadAllUrl()
 	} else {
-		msg.Text = "Received " + string(len(files)) + " files: " + requestShare.DownloadAllUrl()
+		msg.Text = "Received " + string(len(files)) + " files: " + share.DownloadAllUrl()
 		var fileNames []string
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
@@ -87,13 +94,15 @@ func (wf SlackWorkflow) Send() {
 	defer close(wf.Responses)
 	sf := wf.Authenticate()
 	// wrong, need to select here to exit cleanly? or signal quit?
-	poller, share, err := SetupRequestShare(sf)
+	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
 		wf.SendError(err)
 		return
 	}
-	defer close(poller.Quit)
 	wf.Responses <- SlackMessage{Text: "Upload your files: " + share.Uri}
+	poller := sf.FolderPoller(folder.Id)
+	go poller.PollForSend()
+	defer close(poller.Quit)
 	for {
 		select {
 		case <-wf.Quit:
@@ -122,13 +131,13 @@ func (wf SlackWorkflow) Send() {
 	}
 }
 
-func (sendShare SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
+func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
 	var msg SlackMessage
 	if len(files) == 1 {
 		// download all url doesn't do zip for single file, looks better
-		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + sendShare.DownloadAllUrl()
+		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + share.DownloadAllUrl()
 	} else {
-		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + sendShare.DownloadAllUrl()
+		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + share.DownloadAllUrl()
 		msg.ResponseType = "in_channel"
 		var fileNames []string
 		for _, file := range files {
@@ -144,24 +153,25 @@ func (sendShare SfShare) BuildSendNotification(files []SfFile, slackUser SlackUs
 	return msg
 }
 
-func SetupRequestShare(sf SfLogin) (*FolderPoller, SfShare, error) {
+func SetupRequestShare(sf SfLogin) (SfFolder, SfShare, error) {
 	channelName := "channel"
 	requestTime := time.Now().Format(nowFormat)
 	slackFolder, err := sf.FindOrCreateSlackFolder()
 	if err != nil {
-		return nil, SfShare{}, err
+		return SfFolder{}, SfShare{}, err
 	}
 	folderName := channelName + " " + requestTime
 	shareFolder, err := sf.CreateFolder(folderName, slackFolder.Id)
 	if err != nil {
-		return nil, SfShare{}, err
+		return SfFolder{}, SfShare{}, err
 	}
 	share, err := sf.CreateRequestShare(shareFolder.Id)
 	if err != nil {
 		// cleanup folder?
-		return nil, SfShare{}, err
+		return SfFolder{}, SfShare{}, err
 	}
-	return sf.PollFolder(shareFolder.Id), share, nil
+
+	return shareFolder, share, nil
 }
 
 func (sf SfLogin) FindOrCreateSlackFolder() (SfFolder, error) {
@@ -179,52 +189,4 @@ func (sf SfLogin) FindOrCreateSlackFolder() (SfFolder, error) {
 		}
 	}
 	return sf.CreateFolder(slackFolderName, "home")
-}
-
-type FolderPoller struct {
-	Sf       SfLogin
-	FolderId string
-	NewItems chan []SfItem
-	Quit     chan struct{}
-}
-
-func (sf SfLogin) PollFolder(folderId string) *FolderPoller {
-	fp := &FolderPoller{
-		sf,
-		folderId,
-		make(chan []SfItem),
-		make(chan struct{})}
-	go fp.Poll()
-	return fp
-}
-
-func (fp *FolderPoller) Poll() {
-	// probably want Timer for Reset(newPollTime) ?
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-	defer close(fp.NewItems)
-	known := make(map[string]bool)
-	for {
-		select {
-		case <-ticker.C:
-			items, err := fp.Sf.GetChildren(fp.FolderId)
-			if err != nil {
-				continue
-			}
-			var newItems []SfItem
-			for _, item := range items {
-				if !known[item.Id] {
-					known[item.Id] = true
-					newItems = append(newItems, item)
-				}
-			}
-			if len(newItems) > 0 {
-				fp.NewItems <- newItems
-			}
-		case _, ok := <-fp.Quit:
-			if !ok {
-				return
-			}
-		}
-	}
 }
