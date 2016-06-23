@@ -138,7 +138,6 @@ func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) 
 		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + share.DownloadAllUrl()
 	} else {
 		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + share.DownloadAllUrl()
-		msg.ResponseType = "in_channel"
 		var fileNames []string
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
@@ -150,6 +149,7 @@ func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) 
 			},
 		}
 	}
+	msg.ResponseType = "in_channel"
 	return msg
 }
 

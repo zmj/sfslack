@@ -19,11 +19,11 @@ func (sf SfLogin) FolderPoller(folderId string) *FolderPoller {
 }
 
 func (fp *FolderPoller) PollForSend() {
-	// probably want Timer for Reset(newPollTime) ?
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	defer close(fp.NewItems)
 	known := make(map[string]bool)
+	var uploaded []SfItem
 	for {
 		select {
 		case <-ticker.C:
@@ -38,8 +38,13 @@ func (fp *FolderPoller) PollForSend() {
 					newItems = append(newItems, item)
 				}
 			}
-			if len(newItems) > 0 {
-				fp.NewItems <- newItems
+			if len(newItems) == 0 && len(uploaded) > 0 {
+				fp.NewItems <- uploaded
+				uploaded = nil
+			} else if len(newItems) > 0 {
+				for _, item := range newItems {
+					uploaded = append(uploaded, item)
+				}
 			}
 		case _, ok := <-fp.Quit:
 			if !ok {
@@ -51,7 +56,7 @@ func (fp *FolderPoller) PollForSend() {
 
 func (fp *FolderPoller) PollForRequest() {
 	// probably want Timer for Reset(newPollTime) ?
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(8 * time.Second)
 	defer ticker.Stop()
 	defer close(fp.NewItems)
 	known := make(map[string]bool)
