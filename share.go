@@ -22,15 +22,14 @@ func (wf SlackWorkflow) SendError(err error) {
 	wf.Responses <- SlackMessage{Text: "Error: " + err.Error()}
 }
 
-func (wf SlackWorkflow) Authenticate() SfLogin {
-	// send request, wait on it
-	return TestLogin()
-}
-
-func (wf SlackWorkflow) Request() {
+func (wf SlackWorkflow) Request(auth chan SfLogin) {
 	defer close(wf.Responses)
-	sf := wf.Authenticate()
-	// what if quit while in auth? need to select quit/authreq
+	var sf SfLogin
+	select {
+	case <-wf.Quit:
+		return
+	case sf = <-auth:
+	}
 	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
 		wf.SendError(err)
@@ -90,10 +89,14 @@ func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
 	return msg
 }
 
-func (wf SlackWorkflow) Send() {
+func (wf SlackWorkflow) Send(auth chan SfLogin) {
 	defer close(wf.Responses)
-	sf := wf.Authenticate()
-	// wrong, need to select here to exit cleanly? or signal quit?
+	var sf SfLogin
+	select {
+	case <-wf.Quit:
+		return
+	case sf = <-auth:
+	}
 	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
 		wf.SendError(err)

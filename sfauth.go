@@ -18,6 +18,11 @@ func TestLogin() SfLogin {
 	return SfLogin{account, jar}
 }
 
-func AuthExists(slack SlackUser) (SfLogin, bool) {
-	return TestLogin(), true
+type AuthCache struct {
+}
+
+func (ac *AuthCache) Authenticate(wf SlackWorkflow) chan SfLogin {
+	auth := make(chan SfLogin)
+	auth <- TestLogin()
+	return auth
 }

@@ -18,6 +18,7 @@ func main() {
 }
 
 type Server struct {
+	Auth *AuthCache
 }
 
 func (s *Server) Handler() http.Handler {
@@ -61,9 +62,9 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 	wf := SlackWorkflow{cmd.User, make(chan SlackMessage), make(chan struct{})}
 	switch cmd.Command {
 	case "/sfsend":
-		go wf.Send()
+		go wf.Send(s.Auth.Authenticate(wf))
 	case "/sfrequest":
-		go wf.Request()
+		go wf.Request(s.Auth.Authenticate(wf))
 	default:
 		http.Error(wr, "Unknown command", http.StatusBadRequest)
 		// leaked channels here - change flow
