@@ -37,7 +37,7 @@ func (wf SlackWorkflow) Request() {
 		return
 	}
 	msg := SlackMessage{
-		Text:         wf.User.Name + " is requesting files: " + share.Uri,
+		Text:         fmt.Sprintf("%v is requesting files: %v", wf.User.Name, share.Uri),
 		ResponseType: "in_channel"}
 	wf.Responses <- msg
 	poller := sf.FolderPoller(folder.Id)
@@ -73,9 +73,9 @@ func (wf SlackWorkflow) Request() {
 func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
 	var msg SlackMessage
 	if len(files) == 1 {
-		msg.Text = "Received " + files[0].FileName + ": " + share.DownloadAllUrl()
+		msg.Text = fmt.Sprintf("Received %v: %v", files[0].FileName, share.DownloadAllUrl())
 	} else {
-		msg.Text = "Received " + string(len(files)) + " files: " + share.DownloadAllUrl()
+		msg.Text = fmt.Sprintf("Received %v files: %v", len(files), share.DownloadAllUrl())
 		var fileNames []string
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
@@ -99,7 +99,7 @@ func (wf SlackWorkflow) Send() {
 		wf.SendError(err)
 		return
 	}
-	wf.Responses <- SlackMessage{Text: "Upload your files: " + share.Uri}
+	wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files: ", share.Uri)}
 	poller := sf.FolderPoller(folder.Id)
 	go poller.PollForSend()
 	defer close(poller.Quit)
@@ -132,12 +132,12 @@ func (wf SlackWorkflow) Send() {
 }
 
 func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
-	var msg SlackMessage
+	msg := SlackMessage{ResponseType: "in_channel"}
 	if len(files) == 1 {
 		// download all url doesn't do zip for single file, looks better
-		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + share.DownloadAllUrl()
+		msg.Text = fmt.Sprintf("%v has shared %v: %v", slackUser.Name, files[0].FileName, share.DownloadAllUrl())
 	} else {
-		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + share.DownloadAllUrl()
+		msg.Text = fmt.Sprintf("%v has shared %v files: %v", slackUser.Name, len(files), share.DownloadAllUrl())
 		var fileNames []string
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
@@ -149,7 +149,6 @@ func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) 
 			},
 		}
 	}
-	msg.ResponseType = "in_channel"
 	return msg
 }
 

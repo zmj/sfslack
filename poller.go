@@ -55,7 +55,6 @@ func (fp *FolderPoller) PollForSend() {
 }
 
 func (fp *FolderPoller) PollForRequest() {
-	// probably want Timer for Reset(newPollTime) ?
 	ticker := time.NewTicker(8 * time.Second)
 	defer ticker.Stop()
 	defer close(fp.NewItems)
