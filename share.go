@@ -69,11 +69,15 @@ func (requestShare SfShare) BuildRequestNotification(files []SfFile) SlackMessag
 		msg.Text = "Received " + files[0].FileName + ": " + requestShare.DownloadUrl(files[0].Id)
 	} else {
 		msg.Text = "Received " + string(len(files)) + " files: " + requestShare.DownloadAllUrl()
+		var fileNames []string
 		for _, file := range files {
-			msg.Attachments = append(msg.Attachments, SlackAttachment{
-				Text:     file.FileName,
-				Fallback: file.FileName,
-			})
+			fileNames = append(fileNames, file.FileName)
+		}
+		msg.Attachments = []SlackAttachment{
+			SlackAttachment{
+				Text:     strings.Join(fileNames, "\n"),
+				Fallback: strings.Join(fileNames, " "),
+			},
 		}
 	}
 	return msg
