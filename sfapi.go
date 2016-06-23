@@ -21,12 +21,13 @@ type SfLogin struct {
 }
 
 type SfShare struct {
-	Id        string   `json:",omitempty"`
-	Url       string   `json:"url,omitempty"`
-	ShareType string   `json:",omitempty"`
-	Parent    SfFolder `json:",omitempty"`
-	Items     []SfFile `json:",omitempty"`
-	Uri       string   `json:",omitempty"`
+	Account   SfAccount `json:"-"`
+	Id        string    `json:",omitempty"`
+	Url       string    `json:"url,omitempty"`
+	ShareType string    `json:",omitempty"`
+	Parent    SfFolder  `json:",omitempty"`
+	Items     []SfFile  `json:",omitempty"`
+	Uri       string    `json:",omitempty"`
 }
 
 type SfItem struct {
@@ -116,6 +117,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 	if err != nil {
 		return SfShare{}, err
 	}
+	created.Account = sf.SfAccount
 
 	return created, nil
 }
@@ -182,12 +184,12 @@ func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
 	return items.Items, nil
 }
 
-func (sf SfLogin) DownloadAllUrl(shareId string) string {
-	return sf.ItemUrl("Shares", shareId) + "/Download"
+func (sh SfShare) DownloadAllUrl() string {
+	return sh.Account.ItemUrl("Shares", sh.Id) + "/Download"
 }
 
-func (sf SfLogin) DownloadUrl(shareId, fileId string) string {
-	return sf.ItemUrl("Shares", shareId) + "/Download(" + fileId + ")"
+func (sh SfShare) DownloadUrl(fileId string) string {
+	return sh.Account.ItemUrl("Shares", sh.Id) + "/Download(" + fileId + ")"
 }
 
 func dbgReq(req *http.Request) {

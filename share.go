@@ -57,18 +57,25 @@ func (wf SlackWorkflow) Request() {
 			if len(files) == 0 {
 				continue
 			}
-			msg := SlackMessage{Text: "Files were sent to you."}
-			for _, file := range files {
-				msg.Attachments = append(msg.Attachments, SlackAttachment{
-					Text:     file.FileName + ": " + sf.DownloadUrl(share.Id, file.Id),
-					Fallback: file.FileName,
-				})
-			}
-			for _, item := range newItems {
-				wf.Responses <- SlackMessage{Text: item.FileName + " was sent to you."}
-			}
+			wf.Responses <- share.BuildRequestNotification(files)
 		}
 	}
+}
+
+func (requestShare SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
+	var msg SlackMessage
+	if len(files) == 1 {
+		msg.Text = "Received " + files[0].FileName + ": " + requestShare.DownloadUrl(files[0].Id)
+	} else {
+		msg.Text = "Received " + string(len(files)) + " files: " + requestShare.DownloadAllUrl()
+		for _, file := range files {
+			msg.Attachments = append(msg.Attachments, SlackAttachment{
+				Text:     file.FileName,
+				Fallback: file.FileName,
+			})
+		}
+	}
+	return msg
 }
 
 func (wf SlackWorkflow) Send() {
@@ -104,20 +111,27 @@ func (wf SlackWorkflow) Send() {
 				wf.SendError(err)
 				return
 			}
-			msg := SlackMessage{
-				Text:         wf.User.Name + " has shared files: " + sf.DownloadAllUrl(sendShare.Id),
-				ResponseType: "in_channel"}
-			for _, file := range files {
-				txt := file.FileName + ": " + sf.DownloadUrl(sendShare.Id, file.Id)
-				msg.Attachments = append(msg.Attachments, SlackAttachment{
-					Text:     txt,
-					Fallback: file.FileName,
-				})
-			}
-			wf.Responses <- msg
+			wf.Responses <- sendShare.BuildSendNotification(files, wf.User)
 			return
 		}
 	}
+}
+
+func (sendShare SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
+	var msg SlackMessage
+	if len(files) == 1 {
+		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + sendShare.DownloadUrl(files[0].Id)
+	} else {
+		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + sendShare.DownloadAllUrl()
+		msg.ResponseType = "in_channel"
+		for _, file := range files {
+			msg.Attachments = append(msg.Attachments, SlackAttachment{
+				Text:     file.FileName,
+				Fallback: file.FileName,
+			})
+		}
+	}
+	return msg
 }
 
 func SetupRequestShare(sf SfLogin) (*FolderPoller, SfShare, error) {
