@@ -10,13 +10,14 @@ import (
 )
 
 type SfAccount struct {
-	Subdomain       string
-	AppControlPlane string
-	ApiControlPlane string
+	Subdomain       string `json:"subdomain,omitempty"`
+	AppControlPlane string `json:"appcp,omitempty"`
+	ApiControlPlane string `json:"apicp,omitempty"`
 }
 
 type SfLogin struct {
 	SfAccount
+	Token   SfOAuthToken
 	Cookies http.CookieJar
 }
 

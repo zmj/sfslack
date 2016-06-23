@@ -18,8 +18,8 @@ type SlackWorkflow struct {
 }
 
 func (wf SlackWorkflow) SendError(err error) {
-	fmt.Println("Notifying ", wf.User.Name, " error: ", err.Error())
-	wf.Responses <- SlackMessage{Text: "Error: " + err.Error()}
+	fmt.Println("Notifying", wf.User.Name, "error:", err.Error())
+	wf.Responses <- SlackMessage{Text: "Error:" + err.Error()}
 }
 
 func (wf SlackWorkflow) Request(auth chan SfLogin) {
@@ -102,7 +102,7 @@ func (wf SlackWorkflow) Send(auth chan SfLogin) {
 		wf.SendError(err)
 		return
 	}
-	wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files: ", share.Uri)}
+	wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files:", share.Uri)}
 	poller := sf.FolderPoller(folder.Id)
 	go poller.PollForSend()
 	defer close(poller.Quit)
@@ -114,7 +114,7 @@ func (wf SlackWorkflow) Send(auth chan SfLogin) {
 			if !ok {
 				return
 			}
-			files := make([]SfFile, 0, 0)
+			var files []SfFile
 			for _, item := range newItems {
 				if file, err := item.File(); err == nil {
 					files = append(files, file)

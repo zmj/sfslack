@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	s := &Server{}
+	s := &Server{NewAuthCache()}
 	(&http.Server{
 		Addr:    ":8619",
 		Handler: s.Handler(),
@@ -62,9 +62,9 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 	wf := SlackWorkflow{cmd.User, make(chan SlackMessage), make(chan struct{})}
 	switch cmd.Command {
 	case "/sfsend":
-		go wf.Send(s.Auth.Authenticate(wf))
+		go func() { wf.Send(s.Auth.Authenticate(wf)) }()
 	case "/sfrequest":
-		go wf.Request(s.Auth.Authenticate(wf))
+		go func() { wf.Request(s.Auth.Authenticate(wf)) }()
 	default:
 		http.Error(wr, "Unknown command", http.StatusBadRequest)
 		// leaked channels here - change flow
