@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
 const (
 	slackFolderName = ".slack"
-	nowFormat       = "2006-01-02 03:04:05PM"
+	nowFormat       = "2006-01-02 03:04:05PM" // change to 24hr for folder sort
 )
 
 type SlackWorkflow struct {
@@ -48,7 +49,7 @@ func (wf SlackWorkflow) Request() {
 			if !ok {
 				return
 			}
-			files := make([]SfFile, 0, 0)
+			var files []SfFile
 			for _, item := range newItems {
 				if file, err := item.File(); err == nil {
 					files = append(files, file)
@@ -120,15 +121,20 @@ func (wf SlackWorkflow) Send() {
 func (sendShare SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
 	var msg SlackMessage
 	if len(files) == 1 {
-		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + sendShare.DownloadUrl(files[0].Id)
+		// download all url doesn't do zip for single file, looks better
+		msg.Text = slackUser.Name + " has shared " + files[0].FileName + ": " + sendShare.DownloadAllUrl()
 	} else {
 		msg.Text = slackUser.Name + " has shared " + string(len(files)) + " files: " + sendShare.DownloadAllUrl()
 		msg.ResponseType = "in_channel"
+		var fileNames []string
 		for _, file := range files {
-			msg.Attachments = append(msg.Attachments, SlackAttachment{
-				Text:     file.FileName,
-				Fallback: file.FileName,
-			})
+			fileNames = append(fileNames, file.FileName)
+		}
+		msg.Attachments = []SlackAttachment{
+			SlackAttachment{
+				Text:     strings.Join(fileNames, "\n"),
+				Fallback: strings.Join(fileNames, " "),
+			},
 		}
 	}
 	return msg
@@ -201,7 +207,7 @@ func (fp *FolderPoller) Poll() {
 			if err != nil {
 				continue
 			}
-			newItems := make([]SfItem, 0, 0)
+			var newItems []SfItem
 			for _, item := range items {
 				if !known[item.Id] {
 					known[item.Id] = true
