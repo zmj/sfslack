@@ -106,6 +106,14 @@ func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
 		http.Error(wr, "Unable to parse OAuth token", http.StatusBadRequest)
 		return
 	}
-	go s.Auth.FinishAuth(userId, authCode)
+	redirect := make(chan string)
+	go s.Auth.FinishAuth(userId, authCode, redirect)
+	select {
+	case url := <-redirect:
+		if len(url) > 0 {
+			http.Redirect(wr, req, url, http.StatusFound)
+		}
+	case <-time.After(10 * time.Second):
+	}
 	wr.Write([]byte("Logged in! You may close this page."))
 }

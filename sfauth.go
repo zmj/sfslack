@@ -18,41 +18,29 @@ const (
 	OAuthRedirect = "www.empirimancy.net"
 )
 
-func TestLogin() SfLogin {
-	account := SfAccount{"jeffcombscom", "sharefile.com", "sf-api.com"}
-	authCookie := http.Cookie{
-		Name:  "SFAPI_AuthID",
-		Value: "a7622b87-3fff-4caf-97dd-dd7ddb78057d"}
-
-	cookieUrl, _ := url.Parse(account.BaseUrl())
-	jar, _ := cookiejar.New(nil)
-	jar.SetCookies(cookieUrl, []*http.Cookie{&authCookie})
-	return SfLogin{account, SfOAuthToken{}, jar}
-}
-
 type AuthCache struct {
 	mutex         sync.Mutex
 	currentUserId int
 	userIds       map[SlackUser]int
 	logins        map[int]SfLogin
-	pending       map[int][]chan SfLogin
+	pending       map[int][]chan Auth
 }
 
 func NewAuthCache() *AuthCache {
 	ac := &AuthCache{
 		userIds: make(map[SlackUser]int),
 		logins:  make(map[int]SfLogin),
-		pending: make(map[int][]chan SfLogin),
+		pending: make(map[int][]chan Auth),
 	}
 	go ac.refreshLoop()
 	return ac
 }
 
-func (ac *AuthCache) Authenticate(wf SlackWorkflow) chan SfLogin {
+func (ac *AuthCache) Authenticate(wf SlackWorkflow) chan Auth {
 	sf, found := ac.getLogin(wf.User)
 	if found {
-		c := make(chan SfLogin, 1)
-		c <- sf
+		c := make(chan Auth, 1)
+		c <- Auth{sf, nil}
 		close(c)
 		return c
 	}
@@ -61,7 +49,12 @@ func (ac *AuthCache) Authenticate(wf SlackWorkflow) chan SfLogin {
 	return c
 }
 
-func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode) {
+type Auth struct {
+	Login    SfLogin
+	Redirect chan string // maybe nil
+}
+
+func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode, redirect chan string) {
 	token, err := authCode.GetToken()
 	if err != nil {
 		fmt.Println("Auth finish failed", err.Error())
@@ -75,8 +68,13 @@ func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode) {
 	pending := ac.pending[userId]
 	ac.pending[userId] = nil
 	ac.mutex.Unlock()
-	for _, c := range pending {
-		c <- sf
+	for i, c := range pending {
+		auth := Auth{sf, nil}
+		mostRecent := i == len(pending)-1
+		if mostRecent {
+			auth.Redirect = redirect
+		}
+		c <- auth
 	}
 }
 
@@ -101,11 +99,11 @@ func (ac *AuthCache) getLogin(su SlackUser) (SfLogin, bool) {
 	return sf, found
 }
 
-func (ac *AuthCache) startLogin(su SlackUser) (string, chan SfLogin) {
+func (ac *AuthCache) startLogin(su SlackUser) (string, chan Auth) {
 	ac.mutex.Lock()
 	defer ac.mutex.Unlock()
 	id := ac.getId(su)
-	c := make(chan SfLogin)
+	c := make(chan Auth)
 	ac.pending[id] = append(ac.pending[id], c)
 	return ac.loginUrl(id), c
 }

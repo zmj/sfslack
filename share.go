@@ -22,13 +22,17 @@ func (wf SlackWorkflow) SendError(err error) {
 	wf.Responses <- SlackMessage{Text: "Error:" + err.Error()}
 }
 
-func (wf SlackWorkflow) Request(auth chan SfLogin) {
+func (wf SlackWorkflow) Request(authReq chan Auth) {
 	defer close(wf.Responses)
-	var sf SfLogin
+	var auth Auth
 	select {
 	case <-wf.Quit:
 		return
-	case sf = <-auth:
+	case auth = <-authReq:
+	}
+	sf := auth.Login
+	if auth.Redirect != nil {
+		close(auth.Redirect)
 	}
 	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
@@ -89,20 +93,26 @@ func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
 	return msg
 }
 
-func (wf SlackWorkflow) Send(auth chan SfLogin) {
+func (wf SlackWorkflow) Send(authReq chan Auth) {
 	defer close(wf.Responses)
-	var sf SfLogin
+	var auth Auth
 	select {
 	case <-wf.Quit:
 		return
-	case sf = <-auth:
+	case auth = <-authReq:
 	}
+	sf := auth.Login
 	folder, share, err := SetupRequestShare(sf)
 	if err != nil {
 		wf.SendError(err)
 		return
 	}
-	wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files:", share.Uri)}
+	if auth.Redirect == nil {
+		wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files:", share.Uri)}
+	} else {
+		auth.Redirect <- share.Uri
+		close(auth.Redirect)
+	}
 	poller := sf.FolderPoller(folder.Id)
 	go poller.PollForSend()
 	defer close(poller.Quit)
