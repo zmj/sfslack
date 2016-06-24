@@ -208,7 +208,7 @@ func (sf SfAccount) TokenPost(values map[string]string) (SfOAuthToken, error) {
 	if err != nil {
 		return SfOAuthToken{}, err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	hc := http.Client{}
 	resp, err := hc.Do(req)
