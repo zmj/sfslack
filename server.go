@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -26,6 +27,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/sfslack/", s.Print)
 	mux.HandleFunc("/sfslack/send", s.SlackCommand)
 	mux.HandleFunc("/sfslack/request", s.SlackCommand)
+	mux.HandleFunc("sfslack/auth", s.AuthCallback)
 	return mux
 }
 
@@ -67,7 +69,8 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 		go func() { wf.Request(s.Auth.Authenticate(wf)) }()
 	default:
 		http.Error(wr, "Unknown command", http.StatusBadRequest)
-		// leaked channels here - change flow
+		close(wf.Responses)
+		close(wf.Quit)
 		return
 	}
 	firstResponse := <-wf.Responses
@@ -90,4 +93,19 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 		}
 	}()
 	firstResponse.WriteTo(wr)
+}
+
+func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
+	userId, err := strconv.Atoi(req.URL.Query().Get("userid"))
+	if err != nil {
+		http.Error(wr, "Unable to parse auth id", http.StatusBadRequest)
+		return
+	}
+	authCode, err := ParseOAuthCode(req.URL.Query())
+	if err != nil {
+		http.Error(wr, "Unable to parse OAuth token", http.StatusBadRequest)
+		return
+	}
+	go s.Auth.FinishAuth(userId, authCode)
+	wr.Write([]byte("Logged in! You may close this page."))
 }

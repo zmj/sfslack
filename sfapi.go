@@ -102,6 +102,7 @@ func (sf SfLogin) CreateShare(toCreate SfShare) (SfShare, error) {
 		return SfShare{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	sf.AddHeaders(req)
 
 	hc := http.Client{Jar: sf.Cookies}
 	resp, err := hc.Do(req)
@@ -138,6 +139,7 @@ func (sf SfLogin) CreateFolder(name, parentFolderId string) (SfFolder, error) {
 		return SfFolder{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	sf.AddHeaders(req)
 
 	hc := http.Client{Jar: sf.Cookies}
 	resp, err := hc.Do(req)
@@ -165,6 +167,7 @@ func (sf SfLogin) GetChildren(parentFolderId string) ([]SfItem, error) {
 	if err != nil {
 		return nil, err
 	}
+	sf.AddHeaders(req)
 
 	hc := http.Client{Jar: sf.Cookies}
 	resp, err := hc.Do(req)

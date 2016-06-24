@@ -137,7 +137,6 @@ func (wf SlackWorkflow) Send(auth chan SfLogin) {
 func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
 	msg := SlackMessage{ResponseType: "in_channel"}
 	if len(files) == 1 {
-		// download all url doesn't do zip for single file, looks better
 		msg.Text = fmt.Sprintf("%v has shared %v: %v", slackUser.Name, files[0].FileName, share.DownloadAllUrl())
 	} else {
 		msg.Text = fmt.Sprintf("%v has shared %v files: %v", slackUser.Name, len(files), share.DownloadAllUrl())

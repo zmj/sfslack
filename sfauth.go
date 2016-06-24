@@ -67,14 +67,15 @@ func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode) {
 		fmt.Println("Auth finish failed", err.Error())
 		return
 	}
-	sf := SfLogin{token.SfAccount, token, jar}
+	sf := SfLogin{token.SfAccount, token, nil}
 
 	ac.mutex.Lock()
+	ac.logins[userId] = sf
 	pending := ac.pending[userId]
 	ac.pending[userId] = nil
 	ac.mutex.Unlock()
 	for _, c := range pending {
-		// c <- login
+		c <- sf
 	}
 }
 
@@ -119,7 +120,7 @@ func (ac *AuthCache) callbackUrl(id int) string {
 }
 
 func (ac *AuthCache) refreshLoop() {
-	ticker := time.NewTicker(6 * time.Hour)
+	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
 		select {
@@ -154,7 +155,7 @@ type SfOAuthCode struct {
 type SfOAuthToken struct {
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    int64  `json:"expires_in,omitempty"`
+	ExpiresIn    int    `json:"expires_in,omitempty"`
 	SfAccount
 	ExpiresAt time.Time `json:"-"`
 }
@@ -221,22 +222,23 @@ func (sf SfAccount) TokenPost(values map[string]string) (SfOAuthToken, error) {
 	if err != nil {
 		return SfOAuthToken{}, err
 	}
+	created.SetExpiresAt()
 
 	return created, nil
 }
 
 func (sf SfOAuthToken) ShouldRefresh() bool {
-	// percent of expiry
-	return false
+	return sf.ExpiresAt.Sub(time.Now()).Hours() < 2
 }
 
-func (sf SfOAuthToken) CookieJar() *cookiejar.Jar {
-	jar, _ := cookiejar.New(nil)
-	// oauth token -> auth header
-	cookieUrl, _ := url.Parse(sf.BaseUrl())
-	authCookie := http.Cookie{
-		Name:  "SFAPI_AuthID",
-		Value: sf.AccessToken}
-	jar.SetCookies(cookieUrl, []*http.Cookie{&authCookie})
-	return jar
+func (sf SfOAuthToken) SetExpiresAt() {
+	d := time.Duration(sf.ExpiresIn) * time.Second
+	sf.ExpiresAt = time.Now().Add(d)
+}
+
+func (sf SfLogin) AddHeaders(req *http.Request) {
+	if sf.Cookies == nil {
+		req.Header.Add("Authorization", "Bearer "+sf.Token.AccessToken)
+	}
+	sf.Cookies, _ = cookiejar.New(nil)
 }
