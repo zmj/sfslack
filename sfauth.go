@@ -126,15 +126,15 @@ func (ac *AuthCache) refreshLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			var toRefresh []SfLogin
+			toRefresh := make(map[int]SfLogin)
 			ac.mutex.Lock()
-			for _, sf := range ac.logins {
+			for id, sf := range ac.logins {
 				if sf.Token.ShouldRefresh() {
-					toRefresh = append(toRefresh, sf)
+					toRefresh[id] = sf
 				}
 			}
 			ac.mutex.Unlock()
-			for _, sf := range toRefresh {
+			for id, sf := range toRefresh {
 				newToken, err := sf.Token.Refresh()
 				if err != nil {
 					fmt.Println("Failed token refresh", err.Error())
@@ -144,6 +144,7 @@ func (ac *AuthCache) refreshLoop() {
 				ac.mutex.Lock()
 				sf.Token = newToken
 				sf.Cookies, _ = cookiejar.New(nil)
+				ac.logins[id] = sf
 				ac.mutex.Unlock()
 			}
 		}
@@ -243,7 +244,6 @@ func (sf SfOAuthToken) SetExpiresAt() {
 func (sf SfLogin) AddHeaders(req *http.Request) {
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", sf.Subdomain, sf.ApiControlPlane))
 	cookies := sf.Cookies.Cookies(url)
-	fmt.Println(url, cookies)
 	if len(cookies) == 0 {
 		req.Header.Add("Authorization", "Bearer "+sf.Token.AccessToken)
 	}
