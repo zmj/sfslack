@@ -61,7 +61,11 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	wf := SlackWorkflow{cmd.User, make(chan SlackMessage), make(chan struct{})}
+	wf := SlackWorkflow{
+		cmd.User,
+		cmd.Channel,
+		make(chan SlackMessage),
+		make(chan struct{})}
 	switch cmd.Command {
 	case "/sfsend":
 		go func() { wf.Send(s.Auth.Authenticate(wf)) }()
@@ -112,6 +116,7 @@ func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
 	case url := <-redirect:
 		if len(url) > 0 {
 			http.Redirect(wr, req, url, http.StatusFound)
+			return
 		}
 	case <-time.After(10 * time.Second):
 	}

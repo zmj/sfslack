@@ -13,6 +13,7 @@ const (
 
 type SlackWorkflow struct {
 	User      SlackUser
+	Channel   SlackChannel
 	Responses chan SlackMessage
 	Quit      chan struct{}
 }
@@ -34,7 +35,7 @@ func (wf SlackWorkflow) Request(authReq chan Auth) {
 	if auth.Redirect != nil {
 		close(auth.Redirect)
 	}
-	folder, share, err := SetupRequestShare(sf)
+	folder, share, err := SetupRequestShare(sf, wf.FolderName())
 	if err != nil {
 		wf.SendError(err)
 		return
@@ -102,7 +103,7 @@ func (wf SlackWorkflow) Send(authReq chan Auth) {
 	case auth = <-authReq:
 	}
 	sf := auth.Login
-	folder, share, err := SetupRequestShare(sf)
+	folder, share, err := SetupRequestShare(sf, wf.FolderName())
 	if err != nil {
 		wf.SendError(err)
 		return
@@ -164,14 +165,16 @@ func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) 
 	return msg
 }
 
-func SetupRequestShare(sf SfLogin) (SfFolder, SfShare, error) {
-	channelName := "channel"
+func (wf SlackWorkflow) FolderName() string {
 	requestTime := time.Now().Format(nowFormat)
+	return wf.Channel.Name + " " + requestTime
+}
+
+func SetupRequestShare(sf SfLogin, folderName string) (SfFolder, SfShare, error) {
 	slackFolder, err := sf.FindOrCreateSlackFolder()
 	if err != nil {
 		return SfFolder{}, SfShare{}, err
 	}
-	folderName := channelName + " " + requestTime
 	shareFolder, err := sf.CreateFolder(folderName, slackFolder.Id)
 	if err != nil {
 		return SfFolder{}, SfShare{}, err
