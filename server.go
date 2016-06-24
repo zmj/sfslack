@@ -27,7 +27,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/sfslack/", s.Print)
 	mux.HandleFunc("/sfslack/send", s.SlackCommand)
 	mux.HandleFunc("/sfslack/request", s.SlackCommand)
-	mux.HandleFunc("sfslack/auth", s.AuthCallback)
+	mux.HandleFunc("/sfslack/auth", s.AuthCallback)
 	return mux
 }
 

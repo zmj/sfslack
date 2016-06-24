@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -137,11 +137,13 @@ func (ac *AuthCache) refreshLoop() {
 				newToken, err := sf.Token.Refresh()
 				if err != nil {
 					fmt.Println("Failed token refresh", err.Error())
-					// remove login or no?
+					// remove login or no? if actually expired?
 					continue
 				}
+				ac.mutex.Lock()
 				sf.Token = newToken
-				sf.Cookies, _ = cookiejar.New(nil)
+				sf.Cookies = nil
+				ac.mutex.Unlock()
 			}
 		}
 	}
@@ -195,13 +197,14 @@ func (sf SfOAuthToken) Refresh() (SfOAuthToken, error) {
 }
 
 func (sf SfAccount) TokenPost(values map[string]string) (SfOAuthToken, error) {
-	toSend, err := json.Marshal(values)
-	if err != nil {
-		return SfOAuthToken{}, err
+	var valuePairs []string
+	for k, v := range values {
+		valuePairs = append(valuePairs, fmt.Sprintf("%v=%v", k, v))
 	}
+	toSend := strings.Join(valuePairs, "&")
 	req, err := http.NewRequest("POST",
 		fmt.Sprintf("https://%v.%v/oauth/token", sf.Subdomain, sf.AppControlPlane),
-		bytes.NewReader(toSend))
+		strings.NewReader(toSend))
 	if err != nil {
 		return SfOAuthToken{}, err
 	}
