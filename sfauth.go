@@ -67,7 +67,8 @@ func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode) {
 		fmt.Println("Auth finish failed", err.Error())
 		return
 	}
-	sf := SfLogin{token.SfAccount, token, nil}
+	jar, _ := cookiejar.New(nil)
+	sf := SfLogin{token.SfAccount, token, jar}
 
 	ac.mutex.Lock()
 	ac.logins[userId] = sf
@@ -142,7 +143,7 @@ func (ac *AuthCache) refreshLoop() {
 				}
 				ac.mutex.Lock()
 				sf.Token = newToken
-				sf.Cookies = nil
+				sf.Cookies, _ = cookiejar.New(nil)
 				ac.mutex.Unlock()
 			}
 		}
@@ -203,7 +204,7 @@ func (sf SfAccount) TokenPost(values map[string]string) (SfOAuthToken, error) {
 	}
 	toSend := strings.Join(valuePairs, "&")
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("https://%v.%v/oauth/token", sf.Subdomain, sf.AppControlPlane),
+		fmt.Sprintf("https://%v.%v/oauth/token?requirev3=true", sf.Subdomain, sf.AppControlPlane),
 		strings.NewReader(toSend))
 	if err != nil {
 		return SfOAuthToken{}, err
@@ -240,8 +241,10 @@ func (sf SfOAuthToken) SetExpiresAt() {
 }
 
 func (sf SfLogin) AddHeaders(req *http.Request) {
-	if sf.Cookies == nil {
+	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", sf.Subdomain, sf.ApiControlPlane))
+	cookies := sf.Cookies.Cookies(url)
+	fmt.Println(url, cookies)
+	if len(cookies) == 0 {
 		req.Header.Add("Authorization", "Bearer "+sf.Token.AccessToken)
 	}
-	sf.Cookies, _ = cookiejar.New(nil)
 }
