@@ -79,7 +79,7 @@ func (ac *AuthCache) FinishAuth(userId int, authCode SfOAuthCode, redirect chan 
 }
 
 func BuildLoginNotification(url string) SlackMessage {
-	return SlackMessage{Text: fmt.Sprint("Please log in: ", url)}
+	return SlackMessage{Text: fmt.Sprintf("Please log in: %v", url)}
 }
 
 func (ac *AuthCache) getId(su SlackUser) int {

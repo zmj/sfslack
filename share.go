@@ -108,7 +108,7 @@ func (wf SlackWorkflow) Send(authReq chan Auth) {
 		return
 	}
 	if auth.Redirect == nil {
-		wf.Responses <- SlackMessage{Text: fmt.Sprint("Upload your files:", share.Uri)}
+		wf.Responses <- SlackMessage{Text: fmt.Sprintf("Upload your files: %v", share.Uri)}
 	} else {
 		auth.Redirect <- share.Uri
 		close(auth.Redirect)
