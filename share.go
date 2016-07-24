@@ -44,6 +44,7 @@ func (wf SlackWorkflow) Request(authReq chan Auth) {
 		Text:         fmt.Sprintf("%v is requesting files: %v", wf.User.Name, share.Uri),
 		ResponseType: "in_channel"}
 	wf.Responses <- msg
+	fmt.Printf("%v %v request", time.Now(), wf.User.Name)
 	poller := sf.FolderPoller(folder.Id)
 	go poller.PollForRequest()
 	defer close(poller.Quit)
@@ -114,6 +115,7 @@ func (wf SlackWorkflow) Send(authReq chan Auth) {
 		auth.Redirect <- share.Uri
 		close(auth.Redirect)
 	}
+	fmt.Printf("%v %v send", time.Now(), wf.User.Name)
 	poller := sf.FolderPoller(folder.Id)
 	go poller.PollForSend()
 	defer close(poller.Quit)
