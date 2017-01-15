@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	MaxSlackResponses   = 5
-	MaxSlackMessageTime = 30 * time.Minute
+	InitialReplyTimeout = 2500 * time.Millisecond
+	MaxDelayedReplies   = 5
+	DelayedReplyTimeout = 28 * time.Minute
 )
 
 type Command struct {

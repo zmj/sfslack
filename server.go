@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,15 +28,14 @@ type Server struct {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sfslack/", s.Print)
-	mux.HandleFunc("/sfslack/send", s.SlackCommand)
-	mux.HandleFunc("/sfslack/request", s.SlackCommand)
+	mux.HandleFunc("/sfslack/send", s.Command)
+	mux.HandleFunc("/sfslack/request", s.Command)
 	mux.HandleFunc("/sfslack/auth", s.AuthCallback)
 	return mux
 }
 
 func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
 	fmt.Println(req.URL.String())
-	dbgReq(req)
 	wr.Write([]byte("hello"))
 }
 
@@ -56,49 +56,38 @@ func ParseCommand(req *http.Request) (slack.Command, error) {
 	return slack.NewCommand(values)
 }
 
-func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
+func mapToWorkflow(req *http.Request) (SlashCommandWorkflow, error) {
 	cmd, err := ParseCommand(req)
+	if err != nil {
+		return nil, err
+	}
+	var workflow SlashCommandWorkflow
+	switch cmd.Command {
+	case "/sfsend":
+		workflow, err = SendFilesWorkflow(cmd)
+	case "/sfrequest":
+		workflow, err = RequestFilesWorkflow(cmd)
+	default:
+		err = errors.New("Unknown command")
+	}
+	return workflow, err
+}
+
+func (srv *Server) Command(wr http.ResponseWriter, req *http.Request) {
+	replyCtx, replied := context.WithTimeout(context.Background(), slack.InitialReplyTimeout)
+	defer replied()
+
+	workflow, err := mapToWorkflow(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	wf := SlackWorkflow{
-		cmd.User,
-		cmd.Channel,
-		make(chan slack.Message),
-		make(chan struct{})}
-	switch cmd.Command {
-	case "/sfsend":
-		go func() { wf.Send(s.Auth.Authenticate(wf)) }()
-	case "/sfrequest":
-		go func() { wf.Request(s.Auth.Authenticate(wf)) }()
-	default:
-		http.Error(wr, "Unknown command", http.StatusBadRequest)
-		close(wf.Responses)
-		close(wf.Quit)
-		return
-	}
-	firstResponse := <-wf.Responses
-	go func() {
-		defer close(wf.Quit)
-		for sent := 0; sent < slack.MaxSlackResponses; sent++ {
-			select {
-			case <-time.After(slack.MaxSlackMessageTime):
-				return
-			case msg, ok := <-wf.Responses:
-				if !ok {
-					return
-				}
-				err = msg.RespondTo(cmd)
-				if err != nil {
-					fmt.Println("Failed to send ", msg, err)
-					return
-				}
-			}
-		}
-	}()
-	firstResponse.WriteTo(wr)
+	wfCtx, wfDone := context.WithTimeout(context.Background(), slack.DelayedReplyTimeout)
+	go workflow.Start(replyCtx, wfCtx)
+	first := <-workflow.Responses()
+	go workflow.SendDelayedReplies(wfCtx, wfDone)
+	first.WriteTo(wr)
 }
 
 func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
