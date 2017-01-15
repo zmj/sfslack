@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	sf "github.com/zmj/sfslack/sharefile"
+	"github.com/zmj/sfslack/slack"
 )
 
 const (
@@ -12,9 +15,9 @@ const (
 )
 
 type SlackWorkflow struct {
-	User      SlackUser
-	Channel   SlackChannel
-	Responses chan SlackMessage
+	User      slack.User
+	Channel   slack.Channel
+	Responses chan slack.Message
 	Quit      chan struct{}
 }
 
@@ -40,7 +43,7 @@ func (wf SlackWorkflow) Request(authReq chan Auth) {
 		wf.SendError(err)
 		return
 	}
-	msg := SlackMessage{
+	msg := slack.Message{
 		Text:         fmt.Sprintf("%v is requesting files: %v", wf.User.Name, share.Uri),
 		ResponseType: "in_channel"}
 	wf.Responses <- msg
@@ -56,7 +59,7 @@ func (wf SlackWorkflow) Request(authReq chan Auth) {
 			if !ok {
 				return
 			}
-			var files []SfFile
+			var files []sf.File
 			for _, item := range newItems {
 				if file, err := item.File(); err == nil {
 					files = append(files, file)
@@ -75,8 +78,8 @@ func (wf SlackWorkflow) Request(authReq chan Auth) {
 	}
 }
 
-func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
-	var msg SlackMessage
+func (share sf.Share) BuildRequestNotification(files []sf.File) slack.Message {
+	var msg slack.Message
 	if len(files) == 1 {
 		msg.Text = fmt.Sprintf("Received %v: %v", files[0].FileName, share.DownloadAllUrl())
 	} else {
@@ -85,8 +88,8 @@ func (share SfShare) BuildRequestNotification(files []SfFile) SlackMessage {
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
 		}
-		msg.Attachments = []SlackAttachment{
-			SlackAttachment{
+		msg.Attachments = []slack.Attachment{
+			slack.Attachment{
 				Text:     strings.Join(fileNames, "\n"),
 				Fallback: strings.Join(fileNames, " "),
 			},
@@ -147,7 +150,7 @@ func (wf SlackWorkflow) Send(authReq chan Auth) {
 	}
 }
 
-func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) SlackMessage {
+func (share sf.Share) BuildSendNotification(files []sf.File, slackUser slack.User) slack.Message {
 	msg := SlackMessage{ResponseType: "in_channel"}
 	if len(files) == 1 {
 		msg.Text = fmt.Sprintf("%v has shared %v: %v", slackUser.Name, files[0].FileName, share.DownloadAllUrl())
@@ -157,8 +160,8 @@ func (share SfShare) BuildSendNotification(files []SfFile, slackUser SlackUser) 
 		for _, file := range files {
 			fileNames = append(fileNames, file.FileName)
 		}
-		msg.Attachments = []SlackAttachment{
-			SlackAttachment{
+		msg.Attachments = []slack.Attachment{
+			slack.Attachment{
 				Text:     strings.Join(fileNames, "\n"),
 				Fallback: strings.Join(fileNames, " "),
 			},
@@ -172,34 +175,34 @@ func (wf SlackWorkflow) FolderName() string {
 	return wf.Channel.Name + " " + requestTime
 }
 
-func SetupRequestShare(sf SfLogin, folderName string) (SfFolder, SfShare, error) {
+func SetupRequestShare(sf sf.Login, folderName string) (sf.Folder, sf.Share, error) {
 	slackFolder, err := sf.FindOrCreateSlackFolder()
 	if err != nil {
-		return SfFolder{}, SfShare{}, err
+		return sf.Folder{}, sf.Share{}, err
 	}
 	shareFolder, err := sf.CreateFolder(folderName, slackFolder.Id)
 	if err != nil {
-		return SfFolder{}, SfShare{}, err
+		return sf.Folder{}, sf.Share{}, err
 	}
 	share, err := sf.CreateRequestShare(shareFolder.Id)
 	if err != nil {
 		// cleanup folder?
-		return SfFolder{}, SfShare{}, err
+		return sf.Folder{}, sf.Share{}, err
 	}
 
 	return shareFolder, share, nil
 }
 
-func (sf SfLogin) FindOrCreateSlackFolder() (SfFolder, error) {
+func (sf sf.Login) FindOrCreateSlackFolder() (sf.Folder, error) {
 	home, err := sf.GetChildren("home")
 	if err != nil {
-		return SfFolder{}, err
+		return sf.Folder{}, err
 	}
 	for _, item := range home {
 		if item.FileName == slackFolderName {
 			folder, err := item.Folder()
 			if err != nil {
-				return SfFolder{}, err
+				return sf.Folder{}, err
 			}
 			return folder, nil
 		}

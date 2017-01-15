@@ -1,19 +1,20 @@
 package main
 
 import "time"
+import sf "github.com/zmj/sfslack/sharefile"
 
 type FolderPoller struct {
-	Sf       SfLogin
+	Sf       sf.Login
 	FolderId string
-	NewItems chan []SfItem
+	NewItems chan []sf.Item
 	Quit     chan struct{}
 }
 
-func (sf SfLogin) FolderPoller(folderId string) *FolderPoller {
+func (sf sf.Login) FolderPoller(folderId string) *FolderPoller {
 	fp := &FolderPoller{
 		sf,
 		folderId,
-		make(chan []SfItem),
+		make(chan []sf.Item),
 		make(chan struct{})}
 	return fp
 }
@@ -23,7 +24,7 @@ func (fp *FolderPoller) PollForSend() {
 	defer ticker.Stop()
 	defer close(fp.NewItems)
 	known := make(map[string]bool)
-	var uploaded []SfItem
+	var uploaded []sf.Item
 	for {
 		select {
 		case <-ticker.C:
@@ -66,7 +67,7 @@ func (fp *FolderPoller) PollForRequest() {
 			if err != nil {
 				continue
 			}
-			var newItems []SfItem
+			var newItems []sf.Item
 			for _, item := range items {
 				if !known[item.Id] {
 					known[item.Id] = true

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/zmj/sfslack/slack"
 )
 
 func main() {
@@ -37,7 +39,7 @@ func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
 	wr.Write([]byte("hello"))
 }
 
-func ParseCommand(req *http.Request) (SlackCommand, error) {
+func ParseCommand(req *http.Request) (slack.Command, error) {
 	var values url.Values
 	var err error
 	if req.Method == "GET" {
@@ -45,13 +47,13 @@ func ParseCommand(req *http.Request) (SlackCommand, error) {
 	} else if req.Method == "POST" {
 		err = req.ParseForm()
 		if err != nil {
-			return SlackCommand{}, err
+			return slack.Command{}, err
 		}
 		values = req.PostForm
 	} else {
-		return SlackCommand{}, errors.New("Unsupported HTTP method " + req.Method)
+		return slack.Command{}, errors.New("Unsupported HTTP method " + req.Method)
 	}
-	return NewCommand(values)
+	return slack.NewCommand(values)
 }
 
 func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
@@ -64,7 +66,7 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 	wf := SlackWorkflow{
 		cmd.User,
 		cmd.Channel,
-		make(chan SlackMessage),
+		make(chan slack.Message),
 		make(chan struct{})}
 	switch cmd.Command {
 	case "/sfsend":
@@ -80,9 +82,9 @@ func (s *Server) SlackCommand(wr http.ResponseWriter, req *http.Request) {
 	firstResponse := <-wf.Responses
 	go func() {
 		defer close(wf.Quit)
-		for sent := 0; sent < maxSlackResponses; sent++ {
+		for sent := 0; sent < slack.MaxSlackResponses; sent++ {
 			select {
-			case <-time.After(maxSlackMessageTime):
+			case <-time.After(slack.MaxSlackMessageTime):
 				return
 			case msg, ok := <-wf.Responses:
 				if !ok {

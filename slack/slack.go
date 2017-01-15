@@ -1,4 +1,4 @@
-package main
+package slack
 
 import (
 	"bytes"
@@ -10,53 +10,53 @@ import (
 )
 
 const (
-	maxSlackResponses   = 5
-	maxSlackMessageTime = 30 * time.Minute
+	MaxSlackResponses   = 5
+	MaxSlackMessageTime = 30 * time.Minute
 )
 
-type SlackCommand struct {
+type Command struct {
 	Token       string
 	Command     string
 	Text        string
 	ResponseUrl string
-	User        SlackUser
-	Channel     SlackChannel
-	Team        SlackTeam
+	User        User
+	Channel     Channel
+	Team        Team
 }
 
-type SlackTeam struct {
+type Team struct {
 	Id     string
 	Domain string
 }
 
-type SlackChannel struct {
-	Team SlackTeam
+type Channel struct {
+	Team Team
 	Id   string
 	Name string
 }
 
-type SlackUser struct {
-	Team SlackTeam
+type User struct {
+	Team Team
 	Id   string
 	Name string
 }
 
-func NewCommand(values url.Values) (SlackCommand, error) {
-	team := SlackTeam{
+func NewCommand(values url.Values) (Command, error) {
+	team := Team{
 		Id:     values.Get("team_id"),
 		Domain: values.Get("team_domain"),
 	}
-	channel := SlackChannel{
+	channel := Channel{
 		Team: team,
 		Id:   values.Get("channel_id"),
 		Name: values.Get("channel_name"),
 	}
-	user := SlackUser{
+	user := User{
 		Team: team,
 		Id:   values.Get("user_id"),
 		Name: values.Get("user_name"),
 	}
-	command := SlackCommand{
+	command := Command{
 		Token:       values.Get("token"),
 		Command:     values.Get("command"),
 		Text:        values.Get("text"),
@@ -69,18 +69,18 @@ func NewCommand(values url.Values) (SlackCommand, error) {
 	return command, nil
 }
 
-type SlackMessage struct {
-	Text         string            `json:"text"`
-	ResponseType string            `json:"response_type,omitempty"`
-	Attachments  []SlackAttachment `json:"attachments,omitempty"`
+type Message struct {
+	Text         string       `json:"text"`
+	ResponseType string       `json:"response_type,omitempty"`
+	Attachments  []Attachment `json:"attachments,omitempty"`
 }
 
-type SlackAttachment struct {
+type Attachment struct {
 	Fallback string `json:"fallback,omitempty"`
 	Text     string `json:"text,omitempty"`
 }
 
-func (msg SlackMessage) WriteTo(wr http.ResponseWriter) {
+func (msg Message) WriteTo(wr http.ResponseWriter) {
 	toSend, err := json.Marshal(msg)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusInternalServerError)
@@ -90,7 +90,7 @@ func (msg SlackMessage) WriteTo(wr http.ResponseWriter) {
 	wr.Write(toSend)
 }
 
-func (msg SlackMessage) RespondTo(cmd SlackCommand) error {
+func (msg Message) RespondTo(cmd Command) error {
 	toSend, err := json.Marshal(msg)
 	if err != nil {
 		return err
