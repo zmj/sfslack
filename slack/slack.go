@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	InitialReplyTimeout = 2500 * time.Millisecond
+	InitialReplyTimeout = 2 * time.Second
 	MaxDelayedReplies   = 5
 	DelayedReplyTimeout = 28 * time.Minute
 )

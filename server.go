@@ -18,7 +18,6 @@ func main() {
 		Addr:    ":8619",
 		Handler: s.Handler(),
 	}).ListenAndServe()
-	select {}
 }
 
 type Server struct {
@@ -39,25 +38,24 @@ func (s *Server) Print(wr http.ResponseWriter, req *http.Request) {
 	wr.Write([]byte("hello"))
 }
 
-func ParseCommand(req *http.Request) (slack.Command, error) {
-	var values url.Values
-	var err error
-	if req.Method == "GET" {
-		values = req.URL.Query()
-	} else if req.Method == "POST" {
-		err = req.ParseForm()
-		if err != nil {
-			return slack.Command{}, err
-		}
-		values = req.PostForm
-	} else {
-		return slack.Command{}, errors.New("Unsupported HTTP method " + req.Method)
+func (srv *Server) Command(wr http.ResponseWriter, req *http.Request) {
+	workflow, err := mapToWorkflow(req)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusBadRequest)
+		return
 	}
-	return slack.NewCommand(values)
+	ctx, cancel := context.WithTimeout(req.Context(), slack.InitialReplyTimeout)
+	defer cancel()
+	reply, err := workflow.Start(ctx)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	reply.WriteTo(wr)
 }
 
 func mapToWorkflow(req *http.Request) (SlashCommandWorkflow, error) {
-	cmd, err := ParseCommand(req)
+	cmd, err := parseCommand(req)
 	if err != nil {
 		return nil, err
 	}
@@ -73,21 +71,21 @@ func mapToWorkflow(req *http.Request) (SlashCommandWorkflow, error) {
 	return workflow, err
 }
 
-func (srv *Server) Command(wr http.ResponseWriter, req *http.Request) {
-	replyCtx, replied := context.WithTimeout(context.Background(), slack.InitialReplyTimeout)
-	defer replied()
-
-	workflow, err := mapToWorkflow(req)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusBadRequest)
-		return
+func parseCommand(req *http.Request) (slack.Command, error) {
+	var values url.Values
+	var err error
+	if req.Method == "GET" {
+		values = req.URL.Query()
+	} else if req.Method == "POST" {
+		err = req.ParseForm()
+		if err != nil {
+			return slack.Command{}, err
+		}
+		values = req.PostForm
+	} else {
+		return slack.Command{}, errors.New("Unsupported HTTP method " + req.Method)
 	}
-
-	wfCtx, wfDone := context.WithTimeout(context.Background(), slack.DelayedReplyTimeout)
-	go workflow.Start(replyCtx, wfCtx)
-	first := <-workflow.Responses()
-	go workflow.SendDelayedReplies(wfCtx, wfDone)
-	first.WriteTo(wr)
+	return slack.NewCommand(values)
 }
 
 func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {

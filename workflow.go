@@ -2,69 +2,95 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"time"
+
+	sf "github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
 
 type SlashCommandWorkflow interface {
-	Start(context.Context, context.Context)
-	SendDelayedReplies(context.Context, context.CancelFunc)
-	Responses() <-chan slack.Message
+	Start(context.Context) (slack.Message, error)
 }
+
+type authGetter func(context.Context) *sf.AuthRequest
 
 type slashCommandWf struct {
-	cmd       slack.Command
-	responses chan slack.Message
+	started       time.Time
+	getAuth       authGetter
+	cmd           slack.Command
+	noMoreReplies chan struct{}
+	stop          context.CancelFunc
+	err           error
 }
 
-func (wf *slashCommandWf) Responses() chan slack.Message {
-	return wf.responses
+type workflowWorker func(context.Context, chan<- slack.Message)
+
+func (wf *slashCommandWf) start(ctx context.Context, worker workflowWorker) (slack.Message, error) {
+	c := make(chan slack.Message)
+	wfCtx, wf.stop = context.WithTimeout(context.Background(), slack.DelayedReplyTimeout)
+	// copy context values
+	go worker(wfCtx, c)
+	var firstReply slack.Message
+	select {
+	case <-ctx.Done:
+		firstReply = TimeoutMessage
+	case msg, ok := <-c:
+		if ok {
+			firstReply = msg
+		}
+	}
+	go wf.sendDelayedReplies(c)
+	return firstReply, wf.err
 }
 
-func (wf *slashCommandWf) SendDelayedReplies(ctx context.Context, cancel context.CancelFunc) {
-	defer cancel()
-	for sent := 0; sent < slack.MaxDelayedReplies; sent += 1 {
-		select {
-		case <-ctx.Done():
-			// check error
-			return
-		case msg, ok := <-wf.responses:
-			// errorrrrr
-			msg.WriteTo(wf.cmd)
+func (wf *slashCommandWf) sendDelayedReplies(replies <-chan slack.Message) {
+	remaining = slack.MaxDelayedReplies
+	for msg := range replies {
+		remaining -= 1
+		if remaining >= 0 {
+			go msg.WriteTo(wf.cmd)
+		}
+		if remaining == 0 {
+			close(wf.noMoreReplies)
 		}
 	}
 }
 
-type sendFilesWf struct {
-	slashCommandWf
+func errorMessage(err error) slack.Message {
+	return slack.Message{Text: "Error:" + err.Error()}
 }
 
-type requestFilesWf struct {
-	slashCommandWf
+func loginMessage(url string) slack.Message {
+	return slack.Message{Text: fmt.Sprintf("Please log in: %v", url)}
 }
 
-func SendFilesWorkflow(cmd slack.Command) (SlashCommandWorkflow, error) {
-	return sendFilesWf{
-		slashCommandWf{
-			cmd:       cmd,
-			responses: make(chan slack.Message),
-		},
+func findOrCreateSlackFolder(ctx context.Context, sf sf.Login) (sf.Folder, error) {
+	home, err := sf.GetChildren(ctx, "home")
+	if err != nil {
+		return sf.Folder{}, err
 	}
-}
-
-func RequestFilesWorkflow(cmd slack.Command) (SlashCommandWorkflow, error) {
-	return requestFilesWf{
-		slashCommandWf{
-			cmd:       cmd,
-			responses: make(chan slack.Message),
-		},
+	for _, item := range home {
+		if item.FileName == slackFolderName {
+			folder, err := item.Folder()
+			if err != nil {
+				return sf.Folder{}, err
+			}
+			return folder, nil
+		}
 	}
+	return sf.CreateFolder(slackFolderName, "home")
 }
 
-func (wf *sendFilesWf) Start(replyCtx, wfCtx context.Context) {
-
+func (wf *slashCommandWf) folderName() string {
+	return wf.started.Format(nowFormat)
 }
 
-func (wf *requestFilesWf) Start(replyCtx, wfCtx context.Context) {
-
+func (wf *slashCommandWf) createWorkflowFolder(ctx context.Context, sf sf.Login) (sf.Folder, error) {
+	slackFolder, err := findOrCreateSlackFolder(ctx, sf)
+	if err != nil {
+		return sf.Folder{}, err
+	}
+	return sf.CreateFolder(ctx, wf.folderName(), slackFolder.Id)
 }
