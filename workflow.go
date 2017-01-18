@@ -21,7 +21,6 @@ type slashCommandWf struct {
 	getAuth       authGetter
 	cmd           slack.Command
 	noMoreReplies chan struct{}
-	stop          context.CancelFunc
 	err           error
 }
 
@@ -29,13 +28,16 @@ type workflowWorker func(context.Context, chan<- slack.Message)
 
 func (wf *slashCommandWf) start(ctx context.Context, worker workflowWorker) (slack.Message, error) {
 	c := make(chan slack.Message)
-	wfCtx, wf.stop = context.WithTimeout(context.Background(), slack.DelayedReplyTimeout)
-	// copy context values
-	go worker(wfCtx, c)
+	go func() {
+		wfCtx, wfCancel := context.WithTimeout(context.Background(), slack.DelayedReplyTimeout)
+		// copy context values
+		defer wfCancel()
+		worker(wfCtx, c)
+	}()
 	var firstReply slack.Message
 	select {
-	case <-ctx.Done:
-		firstReply = TimeoutMessage
+	case <-ctx.Done():
+		firstReply = timeoutMessage
 	case msg, ok := <-c:
 		if ok {
 			firstReply = msg
@@ -46,11 +48,11 @@ func (wf *slashCommandWf) start(ctx context.Context, worker workflowWorker) (sla
 }
 
 func (wf *slashCommandWf) sendDelayedReplies(replies <-chan slack.Message) {
-	remaining = slack.MaxDelayedReplies
+	remaining := slack.MaxDelayedReplies
 	for msg := range replies {
-		remaining -= 1
+		remaining--
 		if remaining >= 0 {
-			go msg.WriteTo(wf.cmd)
+			go msg.RespondTo(wf.cmd)
 		}
 		if remaining == 0 {
 			close(wf.noMoreReplies)
@@ -66,8 +68,13 @@ func loginMessage(url string) slack.Message {
 	return slack.Message{Text: fmt.Sprintf("Please log in: %v", url)}
 }
 
-func findOrCreateSlackFolder(ctx context.Context, sf sf.Login) (sf.Folder, error) {
-	home, err := sf.GetChildren(ctx, "home")
+const (
+	slackFolderName = ".slack"
+	nowFormat       = "2006-01-02 15:04:05"
+)
+
+func findOrCreateSlackFolder(ctx context.Context, sfapi sf.Login) (sf.Folder, error) {
+	home, err := sfapi.GetChildren(ctx, "home")
 	if err != nil {
 		return sf.Folder{}, err
 	}
@@ -80,17 +87,19 @@ func findOrCreateSlackFolder(ctx context.Context, sf sf.Login) (sf.Folder, error
 			return folder, nil
 		}
 	}
-	return sf.CreateFolder(slackFolderName, "home")
+	return sfapi.CreateFolder(slackFolderName, "home")
 }
 
 func (wf *slashCommandWf) folderName() string {
 	return wf.started.Format(nowFormat)
 }
 
-func (wf *slashCommandWf) createWorkflowFolder(ctx context.Context, sf sf.Login) (sf.Folder, error) {
-	slackFolder, err := findOrCreateSlackFolder(ctx, sf)
+func (wf *slashCommandWf) createWorkflowFolder(ctx context.Context, sfapi sf.Login) (sf.Folder, error) {
+	slackFolder, err := findOrCreateSlackFolder(ctx, sfapi)
 	if err != nil {
 		return sf.Folder{}, err
 	}
-	return sf.CreateFolder(ctx, wf.folderName(), slackFolder.Id)
+	return sfapi.CreateFolder(ctx, wf.folderName(), slackFolder.Id)
 }
+
+var timeoutMessage = slack.Message{Text: "Logging you in..."}

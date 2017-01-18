@@ -9,19 +9,20 @@ import (
 	"strconv"
 	"time"
 
+	sf "github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
 
 func main() {
-	s := &Server{NewAuthCache()}
+	s := &Server{sf.NewAuthCache("", "")}
 	(&http.Server{
-		Addr:    ":8619",
+		Addr:    ":8080",
 		Handler: s.Handler(),
 	}).ListenAndServe()
 }
 
 type Server struct {
-	Auth *AuthCache
+	Auth *sf.AuthCache
 }
 
 func (s *Server) Handler() http.Handler {

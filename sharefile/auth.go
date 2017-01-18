@@ -17,6 +17,16 @@ type AuthCache struct {
 	usersByID     map[int]*userAuth
 }
 
+func NewAuthCache(oauthID, oauthSecret string) *AuthCache {
+	return &AuthCache{
+		mutex:        sync.Mutex{},
+		oauthID:      oauthID,
+		oauthSecret:  oauthSecret,
+		userIDsByKey: make(map[interface{}]int),
+		usersByID:    make(map[int]*userAuth),
+	}
+}
+
 type authStep int
 
 const (
