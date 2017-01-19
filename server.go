@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	sf "github.com/zmj/sfslack/sharefile"
@@ -89,26 +88,17 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 	return slack.NewCommand(values)
 }
 
-func (s *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
-	userId, err := strconv.Atoi(req.URL.Query().Get("userid"))
+func (srv *Server) AuthCallback(wr http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), 5*time.Second)
+	defer cancel()
+	redirect, err := srv.Auth.Callback(ctx, req.URL.Query())
 	if err != nil {
-		http.Error(wr, "Unable to parse auth id", http.StatusBadRequest)
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-	authCode, err := ParseOAuthCode(req.URL.Query())
-	if err != nil {
-		http.Error(wr, "Unable to parse OAuth token", http.StatusBadRequest)
+	if redirect != "" {
+		http.Redirect(wr, req, redirect, http.StatusFound)
 		return
-	}
-	redirect := make(chan string)
-	go s.Auth.FinishAuth(userId, authCode, redirect)
-	select {
-	case url := <-redirect:
-		if len(url) > 0 {
-			http.Redirect(wr, req, url, http.StatusFound)
-			return
-		}
-	case <-time.After(10 * time.Second):
 	}
 	wr.Write([]byte("Logged in! You may close this page."))
 }

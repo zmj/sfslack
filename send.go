@@ -45,6 +45,6 @@ func (wf *sendFilesWf) worker(ctx context.Context, replies chan<- slack.Message)
 	// start subscriber
 	// make request share
 	// wait for subscribe?
-	// notify user with request share link
+	// notify/redirect user with request share link
 	// range over subscription
 }

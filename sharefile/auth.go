@@ -2,8 +2,10 @@ package sharefile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"sync"
 )
 
@@ -34,6 +36,8 @@ const (
 	stepWaitingForCallback
 	stepGotCallback
 	stepLoggedIn
+	userIDQueryKey    = "uid"
+	requestIDQueryKey = "rid"
 )
 
 type userAuth struct {
@@ -50,7 +54,7 @@ type AuthRequest struct {
 	Login           Login
 	Err             error
 	Done            chan struct{}
-	RedirectBrowser func(string) bool
+	RedirectBrowser chan string
 }
 
 func (ac *AuthCache) Get(ctx context.Context, key interface{}, callbackURL string) *AuthRequest {
@@ -94,6 +98,43 @@ func (ac *AuthCache) cleanupRequest(ctx context.Context, userID, requestID int) 
 	}
 }
 
+func (ac *AuthCache) Callback(ctx context.Context, values url.Values) (string, error) {
+	cb, err := parseAuthCallback(values)
+	if err != nil {
+		return "", err
+	}
+	var login Login
+	var loginErr error
+	// code -> token
+	ac.mutex.Lock()
+	defer ac.mutex.Unlock()
+	user, ok := ac.usersByID[cb.UserID]
+	if !ok {
+		return "", errors.New("Unexpected authentication")
+	}
+	var redirect chan string
+	for _, req := range user.waiting {
+		req.Login = login
+		if loginErr != nil {
+			req.Err = loginErr
+		}
+		if req.ID == cb.RequestID {
+			redirect = make(chan string)
+			req.RedirectBrowser = redirect
+		}
+		close(req.Done)
+	}
+	if redirect != nil {
+		select {
+		case url := <-redirect:
+			return url, nil
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
+	return "", nil
+}
+
 func (ac *AuthCache) getUser(key interface{}) *userAuth {
 	var user *userAuth
 	id, ok := ac.userIDsByKey[key]
@@ -115,5 +156,48 @@ func (ac *AuthCache) loginURL(callbackURL string, userID, requestID int) string 
 }
 
 func (ac *AuthCache) callbackURL(callbackURL string, userID, requestID int) string {
-	return fmt.Sprintf("%v?uid=%v&rid=%v", callbackURL, userID, requestID)
+	return fmt.Sprintf("%v?%v=%v&%v=%v",
+		callbackURL,
+		userIDQueryKey, userID,
+		requestIDQueryKey,
+		requestID)
+}
+
+type authCallback struct {
+	OAuthCode
+	UserID    int
+	RequestID int
+}
+
+func parseAuthCallback(values url.Values) (authCallback, error) {
+	code, err := parseOAuthCode(values)
+	if err != nil {
+		return authCallback{}, err
+	}
+	userID, err := strconv.Atoi(values.Get(userIDQueryKey))
+	if err != nil {
+		return authCallback{}, err
+	}
+	requestID, err := strconv.Atoi(values.Get(requestIDQueryKey))
+	if err != nil {
+		return authCallback{}, err
+	}
+	return authCallback{
+		OAuthCode: code,
+		UserID:    userID,
+		RequestID: requestID,
+	}, nil
+}
+
+func parseOAuthCode(values url.Values) (OAuthCode, error) {
+	code := OAuthCode{
+		Account: Account{
+			Subdomain:       values.Get("subdomain"),
+			AppControlPlane: values.Get("appcp"),
+			ApiControlPlane: values.Get("apicp"),
+		},
+		Code: values.Get("code"),
+	}
+	// validate
+	return code, nil
 }
