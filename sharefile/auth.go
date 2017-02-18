@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"sync"
@@ -103,9 +104,19 @@ func (ac *AuthCache) Callback(ctx context.Context, values url.Values) (string, e
 	if err != nil {
 		return "", err
 	}
-	var login Login
-	var loginErr error
-	// code -> token
+	token, loginErr := cb.GetToken(ctx)
+	if loginErr != nil {
+		return "", err
+	}
+	cookies, err := cookiejar.New(nil)
+	if err != nil {
+		return "", err
+	}
+	login := Login{
+		Token:   token,
+		Account: token.Account,
+		Cookies: cookies,
+	}
 	ac.mutex.Lock()
 	defer ac.mutex.Unlock()
 	user, ok := ac.usersByID[cb.UserID]
