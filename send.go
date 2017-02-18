@@ -42,6 +42,7 @@ func (wf *sendFilesWf) worker(ctx context.Context, replies chan<- slack.Message)
 		replies <- errorMessage(err)
 		return
 	}
+	folder = folder
 	// start subscriber
 	// make request share
 	// wait for subscribe?

@@ -87,7 +87,7 @@ func findOrCreateSlackFolder(ctx context.Context, sfapi sf.Login) (sf.Folder, er
 			return folder, nil
 		}
 	}
-	return sfapi.CreateFolder(slackFolderName, "home")
+	return sfapi.CreateFolder(ctx, slackFolderName, "home")
 }
 
 func (wf *slashCommandWf) folderName() string {

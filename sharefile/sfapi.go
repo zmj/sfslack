@@ -2,6 +2,7 @@ package sharefile
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -97,21 +98,21 @@ func (sf Account) ItemUrl(entity, id string) string {
 	return fmt.Sprintf("%v(%v)", sf.EntityUrl(entity), id)
 }
 
-func (sf Login) CreateRequestShare(parentFolderId string) (Share, error) {
+func (sf Login) CreateRequestShare(ctx context.Context, parentFolderId string) (Share, error) {
 	toCreate := Share{ShareType: "Request",
 		Parent: Folder{Item: Item{Url: sf.ItemUrl("Items", parentFolderId)}}}
-	return sf.CreateShare(toCreate)
+	return sf.CreateShare(ctx, toCreate)
 }
 
-func (sf Login) CreateSendShare(files []File) (Share, error) {
+func (sf Login) CreateSendShare(ctx context.Context, files []File) (Share, error) {
 	toCreate := Share{ShareType: "Send"}
 	for _, file := range files {
 		toCreate.Items = append(toCreate.Items, File{Item{Url: sf.ItemUrl("Items", file.Id)}})
 	}
-	return sf.CreateShare(toCreate)
+	return sf.CreateShare(ctx, toCreate)
 }
 
-func (sf Login) CreateShare(toCreate Share) (Share, error) {
+func (sf Login) CreateShare(ctx context.Context, toCreate Share) (Share, error) {
 	toSend, err := json.Marshal(toCreate)
 	if err != nil {
 		return Share{}, err
@@ -122,6 +123,7 @@ func (sf Login) CreateShare(toCreate Share) (Share, error) {
 	if err != nil {
 		return Share{}, err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Add("Content-Type", "application/json")
 	sf.AddHeaders(req)
 
@@ -145,7 +147,7 @@ func (sf Login) CreateShare(toCreate Share) (Share, error) {
 	return created, nil
 }
 
-func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
+func (sf Login) CreateFolder(ctx context.Context, name, parentFolderId string) (Folder, error) {
 	toCreate := Folder{Name: name}
 
 	toSend, err := json.Marshal(toCreate)
@@ -159,6 +161,7 @@ func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
 	if err != nil {
 		return Folder{}, err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Add("Content-Type", "application/json")
 	sf.AddHeaders(req)
 
@@ -181,13 +184,14 @@ func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
 	return created, nil
 }
 
-func (sf Login) GetChildren(parentFolderId string) ([]Item, error) {
+func (sf Login) GetChildren(ctx context.Context, parentFolderId string) ([]Item, error) {
 	req, err := http.NewRequest("GET",
 		sf.ItemUrl("Items", parentFolderId)+"/Children",
 		nil)
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(ctx)
 	sf.AddHeaders(req)
 
 	hc := http.Client{Jar: sf.Cookies}
@@ -242,27 +246,27 @@ func (sf OAuthToken) SetExpiresAt() {
 	sf.ExpiresAt = time.Now().Add(d)
 }
 
-func (sf OAuthCode) GetToken() (OAuthToken, error) {
+func (sf OAuthCode) GetToken(ctx context.Context) (OAuthToken, error) {
 	values := map[string]string{
 		"client_id":     OAuthId,
 		"client_secret": OAuthSecret,
 		"code":          sf.Code,
 		"grant_type":    "authorization_code",
 	}
-	return sf.TokenPost(values)
+	return sf.TokenPost(ctx, values)
 }
 
-func (sf OAuthToken) Refresh() (OAuthToken, error) {
+func (sf OAuthToken) Refresh(ctx context.Context) (OAuthToken, error) {
 	values := map[string]string{
 		"client_id":     OAuthId,
 		"client_secret": OAuthSecret,
 		"refresh_token": sf.RefreshToken,
 		"grant_type":    "refresh_token",
 	}
-	return sf.TokenPost(values)
+	return sf.TokenPost(ctx, values)
 }
 
-func (sf Account) TokenPost(values map[string]string) (OAuthToken, error) {
+func (sf Account) TokenPost(ctx context.Context, values map[string]string) (OAuthToken, error) {
 	var valuePairs []string
 	for k, v := range values {
 		valuePairs = append(valuePairs, fmt.Sprintf("%v=%v", k, v))
@@ -274,6 +278,7 @@ func (sf Account) TokenPost(values map[string]string) (OAuthToken, error) {
 	if err != nil {
 		return OAuthToken{}, err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	hc := http.Client{}
