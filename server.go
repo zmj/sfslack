@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/workflow"
 )
 
@@ -32,13 +33,23 @@ func (srv *server) handler() http.Handler {
 }
 
 type server struct {
-	mu        *sync.Mutex
-	workflows map[int]workflow.Workflow
+	mu                *sync.Mutex
+	workflows         map[int]workflow.Workflow
+	currentWorkflowID int
+	authCache         *sharefile.AuthCache
 }
 
 func newServer() *server {
 	return &server{
 		mu:        &sync.Mutex{},
 		workflows: make(map[int]workflow.Workflow),
+		authCache: sharefile.NewAuthCache(),
 	}
+}
+
+func (srv *server) nextWorkflowID() int {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	srv.currentWorkflowID += 1
+	return srv.currentWorkflowID
 }
