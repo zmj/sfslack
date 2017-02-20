@@ -39,7 +39,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
         cb := func(msg slack.Message) error {
             firstResponse <- msg
         }
-		wf.Start(userAuth, cb)
+		go wf.Start(userAuth, cb)
         select {
             case msg <- cb:
                 _, respondErr = msg.WriteTo(wr)
@@ -48,8 +48,9 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
         }
 	}
     else {        
-        wf.Start(userAuth, nil)
-        // auth prompt with wfid
+        go wf.Start(userAuth, nil)
+        loginURL := srv.authCache.LoginURL(wfID)
+        _, respondErr := loginMessage(loginURL).WriteTo(wr)
     }
 }
 
@@ -70,5 +71,12 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 }
 
 func logRespondError(cmd slack.Command, err error) {
+    if err == nil {
+        return
+    }
     fmt.Printf("Response failure to %v: %v", cmd.User.Name, err.Error())
+}
+
+func loginMessage(loginURL string) slack.Message {
+
 }

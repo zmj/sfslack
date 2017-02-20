@@ -28,3 +28,7 @@ func (ac *AuthCache) Add(key interface{}, cb AuthCallback) err {
 func ParseCallback(req *http.Request) (AuthCallback, err) {
 
 }
+
+func (ac *AuthCache) LoginURL(wfID int) string {
+
+}
