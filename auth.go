@@ -13,6 +13,6 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 
 	// simplify - don't share pending
 	// wfid -> user
-	// cache.add(user, login)
+	// login := cache.add(user, values)
 	// wf.auth(login, redirectCallback)
 }

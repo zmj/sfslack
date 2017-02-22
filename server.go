@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/zmj/sfslack/sharefile"
+	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
 )
 
@@ -47,9 +48,9 @@ func newServer() *server {
 	}
 }
 
-func (srv *server) nextWorkflowID() int {
+func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, error) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	srv.currentWorkflowID += 1
-	return srv.currentWorkflowID
+	return workflow.NewWorkflow(cmd, srv.currentWorkflowID)
 }

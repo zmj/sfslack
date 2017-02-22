@@ -27,8 +27,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 	wr.Header().Add("Content-Type", "application/json")
-    wfID := srv.nextWorkflowID()
-	wf, err := workflow.NewWorkflow(cmd, wfID)
+    wf, err := srv.newWorkflow(cmd)
 	if err != nil {
 		_, respondErr = helpMessage.WriteTo(wr)
 		return
@@ -49,7 +48,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	}
     else {        
         go wf.Start(userAuth, nil)
-        loginURL := srv.authCache.LoginURL(wfID)
+        loginURL := srv.authCache.LoginURL(wf.ID())
         _, respondErr := loginMessage(loginURL).WriteTo(wr)
     }
 }
@@ -74,9 +73,9 @@ func logRespondError(cmd slack.Command, err error) {
     if err == nil {
         return
     }
-    fmt.Printf("Response failure to %v: %v", cmd.User.Name, err.Error())
+    fmt.Printf("%v Response failure to %v: %v", time.Now(), cmd.User.Name, err.Error())
 }
 
 func loginMessage(loginURL string) slack.Message {
-
+    return slack.Message{}
 }
