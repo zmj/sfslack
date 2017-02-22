@@ -5,52 +5,63 @@ import (
 	"net/http"
 	"net/url"
 
+	"fmt"
+	"time"
+
+	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
-	"time"
-	"fmt"
 )
 
 var (
-    firstResponseTimeout = 2 * time.Second
-    helpMessage = &slack.Message{}
-    workingMessage = &slack.Message{}
+	firstResponseTimeout = 2 * time.Second
+	helpMessage          = &slack.Message{}
+	workingMessage       = &slack.Message{}
 )
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
-    var respondErr error
-    defer logRespondError(respondErr)
+	var respondErr error
+	defer logRespondError(respondErr)
 
-	cmd, err := parseCommand()
+	cmd, err := parseCommand(req)
 	if err != nil {
-		http.Error(wr, err, http.StatusBadRequest)
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
 	wr.Header().Add("Content-Type", "application/json")
-    wf, err := srv.newWorkflow(cmd)
+	wf, err := srv.newWorkflow(cmd)
 	if err != nil {
 		_, respondErr = helpMessage.WriteTo(wr)
 		return
 	}
 	userAuth, authFound := srv.authCache.TryGet(cmd.User)
+	var firstResponse slack.Message
 	if authFound {
-        firstResponse := make(chan slack.Message, 1)
-        cb := func(msg slack.Message) error {
-            firstResponse <- msg
-        }
-		go wf.Start(userAuth, cb)
-        select {
-            case msg <- cb:
-                _, respondErr = msg.WriteTo(wr)
-            case <- time.After(firstResponseTimeout):
-                _, respondErr = workingMessage.WriteTo(wr)
-        }
+		firstResponse = startAuthenticatedWorkflow(wf, userAuth)
+	} else {
+		go wf.Start(userAuth, nil)
+		loginURL := srv.authCache.LoginURL(wf.ID())
+		_, respondErr := loginMessage(loginURL).WriteTo(wr)
 	}
-    else {        
-        go wf.Start(userAuth, nil)
-        loginURL := srv.authCache.LoginURL(wf.ID())
-        _, respondErr := loginMessage(loginURL).WriteTo(wr)
-    }
+	_, respondErr = firstResponse.WriteTo(wr)
+}
+
+func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) slack.Message {
+	response := make(chan slack.Message)
+	accepted := make(chan error, 1)
+	cb := func(msg slack.Message) error {
+		response <- msg
+		return <-accepted
+	}
+	go wf.Start(login, cb)
+	select {
+	case msg := <-response:
+		accepted <- nil
+		return msg
+	case <-time.After(firstResponseTimeout):
+		accepted <- errors.New("Timed out")
+		return *workingMessage
+	}
 }
 
 func parseCommand(req *http.Request) (slack.Command, error) {
@@ -58,7 +69,7 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 	if req.Method == "GET" {
 		values = req.URL.Query()
 	} else if req.Method == "POST" {
-		err = req.ParseForm()
+		err := req.ParseForm()
 		if err != nil {
 			return slack.Command{}, err
 		}
@@ -69,13 +80,13 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 	return slack.ParseCommand(values)
 }
 
-func logRespondError(cmd slack.Command, err error) {
-    if err == nil {
-        return
-    }
-    fmt.Printf("%v Response failure to %v: %v", time.Now(), cmd.User.Name, err.Error())
+func logRespondError(err error) {
+	if err == nil {
+		return
+	}
+	fmt.Printf("%v Response failure: %v", time.Now(), err.Error())
 }
 
 func loginMessage(loginURL string) slack.Message {
-    return slack.Message{}
+	return slack.Message{}
 }

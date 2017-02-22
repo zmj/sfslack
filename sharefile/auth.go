@@ -34,7 +34,7 @@ type Login struct {
 	cookies *cookiejar.Jar
 }
 
-func (login Login) AddCredentials(req *http.Request) *http.Request {
+func (login Login) addCredentials(req *http.Request) *http.Request {
 	// if no cookies: bearer auth header
 	// add cookie jar
 	return req
@@ -102,10 +102,11 @@ func (sf Account) tokenPost(values map[string]string) (oauthToken, error) {
 	if err != nil {
 		return oauthToken{}, err
 	}
-	token = token.setExpiresAt()
+	token = token.withExpiresAt()
 	return token, nil
 }
-func (token oauthToken) setExpiresAt() oauthToken {
+
+func (token oauthToken) withExpiresAt() oauthToken {
 	d := time.Duration(token.ExpiresIn) * time.Second
 	token.ExpiresAt = time.Now().Add(d)
 	return token

@@ -50,6 +50,7 @@ func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) error {
 		login: Login{},
 	}
 	ac.userLogins[key] = userLogin
+	go ac.refreshLoop(key)
 	return nil
 }
 
@@ -57,4 +58,8 @@ func (ac *AuthCache) LoginURL(callbackURL string) string {
 	return fmt.Sprintf("https://secure.sharefile.com/oauth/authorize?response_type=code&client_id=%v&redirect_uri=%v",
 		ac.oauthID,
 		url.QueryEscape(callbackURL))
+}
+
+func (ac *AuthCache) refreshLoop(key interface{}) {
+	// todo
 }
