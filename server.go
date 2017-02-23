@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/zmj/sfslack/secrets"
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
@@ -15,13 +16,19 @@ const (
 )
 
 func main() {
-	srv := newServer()
-	err := (&http.Server{
+	secrets, err := secrets.Load()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	srv := newServer(secrets)
+	err = (&http.Server{
 		Addr:    fmt.Sprintf(":%v", listenport),
 		Handler: srv.handler(),
 	}).ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 }
 
@@ -40,11 +47,11 @@ type server struct {
 	authCache         *sharefile.AuthCache
 }
 
-func newServer() *server {
+func newServer(secrets secrets.Secrets) *server {
 	return &server{
 		mu:        &sync.Mutex{},
 		workflows: make(map[int]workflow.Workflow),
-		authCache: sharefile.NewAuthCache(),
+		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
 	}
 }
 
