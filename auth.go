@@ -1,6 +1,13 @@
 package main
 
 import "net/http"
+import "fmt"
+
+const (
+	authPath         = "/sfslack/auth"
+	publicHostHeader = "X-PUBLIC-HOST"
+	wfidQueryKey     = "wfid"
+)
 
 func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	// parse auth
@@ -15,4 +22,16 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	// wfid -> user
 	// login := cache.add(user, values)
 	// wf.auth(login, redirectCallback)
+}
+
+func (srv *server) authCallbackURL(req *http.Request, wfID int) string {
+	host := req.Header.Get(publicHostHeader)
+	if host == "" {
+		host = req.URL.Host
+	}
+	return fmt.Sprintf("https://%v%v?%v=%v",
+		host,
+		authPath,
+		wfidQueryKey,
+		wfID)
 }

@@ -13,11 +13,19 @@ import (
 	"github.com/zmj/sfslack/workflow"
 )
 
+const (
+	commandPath = "/sfslack/command"
+)
+
 var (
 	firstResponseTimeout = 2 * time.Second
 	helpMessage          = &slack.Message{}
 	workingMessage       = &slack.Message{}
 )
+
+func loginMessage(loginURL string) slack.Message {
+	return slack.Message{}
+}
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	var respondErr error
@@ -40,14 +48,15 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		firstResponse = startAuthenticatedWorkflow(wf, userAuth)
 	} else {
 		go wf.Start(userAuth, nil)
-		loginURL := srv.authCache.LoginURL(wf.ID())
+		authCallbackURL := srv.authCallbackURL(req, wf.ID())
+		loginURL := srv.authCache.LoginURL(authCallbackURL)
 		_, respondErr := loginMessage(loginURL).WriteTo(wr)
 	}
 	_, respondErr = firstResponse.WriteTo(wr)
 }
 
 func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) slack.Message {
-	response := make(chan slack.Message)
+	response := make(chan slack.Message, 1)
 	accepted := make(chan error, 1)
 	cb := func(msg slack.Message) error {
 		response <- msg
@@ -65,19 +74,25 @@ func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) sla
 }
 
 func parseCommand(req *http.Request) (slack.Command, error) {
-	var values url.Values
+	values, err := httpValues(req)
+	if err != nil {
+		return slack.Command{}, err
+	}
+	return slack.ParseCommand(values)
+}
+
+func httpValues(req *http.Request) (url.Values, error) {
 	if req.Method == "GET" {
-		values = req.URL.Query()
+		return req.URL.Query(), nil
 	} else if req.Method == "POST" {
 		err := req.ParseForm()
 		if err != nil {
-			return slack.Command{}, err
+			return url.Values{}, err
 		}
-		values = req.PostForm
+		return req.PostForm, nil
 	} else {
-		return slack.Command{}, errors.New("Unsupported HTTP method " + req.Method)
+		return url.Values{}, errors.New("Unsupported HTTP method " + req.Method)
 	}
-	return slack.ParseCommand(values)
 }
 
 func logRespondError(err error) {
@@ -85,8 +100,4 @@ func logRespondError(err error) {
 		return
 	}
 	fmt.Printf("%v Response failure: %v", time.Now(), err.Error())
-}
-
-func loginMessage(loginURL string) slack.Message {
-	return slack.Message{}
 }

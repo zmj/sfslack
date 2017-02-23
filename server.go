@@ -27,9 +27,9 @@ func main() {
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/sfslack/command", srv.newCommand)
-	mux.HandleFunc("/sfslack/auth", srv.authCallback)
-	mux.HandleFunc("/sfslack/event", srv.eventCallback)
+	mux.HandleFunc(commandPath, srv.newCommand)
+	mux.HandleFunc(authPath, srv.authCallback)
+	mux.HandleFunc(eventPath, srv.eventCallback)
 	return mux
 }
 

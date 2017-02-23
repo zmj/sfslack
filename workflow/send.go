@@ -6,17 +6,13 @@ import (
 )
 
 type sendWorkflow struct {
-	id int
+	*wfBase
 }
 
 func newSend(cmd slack.Command, id int) *sendWorkflow {
 	return &sendWorkflow{
-		id: id,
+		wfBase: newBase(id),
 	}
-}
-
-func (wf *sendWorkflow) ID() int {
-	return wf.id
 }
 
 func (wf *sendWorkflow) Start(sf sharefile.Login, firstResponse ResponseCallback) {

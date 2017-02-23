@@ -6,17 +6,13 @@ import (
 )
 
 type requestWorkflow struct {
-	id int
+	*wfBase
 }
 
 func newRequest(cmd slack.Command, id int) *requestWorkflow {
 	return &requestWorkflow{
-		id: id,
+		wfBase: newBase(id),
 	}
-}
-
-func (wf *requestWorkflow) ID() int {
-	return wf.id
 }
 
 func (wf *requestWorkflow) Start(sf sharefile.Login, firstResponse ResponseCallback) {
