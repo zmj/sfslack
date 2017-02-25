@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"fmt"
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
@@ -16,5 +17,5 @@ func newSend(cmd slack.Command, id int) *sendWorkflow {
 }
 
 func (wf *sendWorkflow) Start(sf sharefile.Login, firstResponse ResponseCallback) {
-
+	fmt.Println("Send start!")
 }
