@@ -14,18 +14,18 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 
-	// parse auth
-	// get wfid
-	// wfid -> user
-	// user -> all wfs
-	// cache.add(user, login)
-	// wfid: wf.auth(login, redirectCallback)
-	// not wfid: wf.auth(login, redirectCallback: nil)
-
-	// simplify - don't share pending
-	// wfid -> user
-	// login := cache.add(user, values)
-	// wf.auth(login, redirectCallback)
+	wf, status, err := srv.getWorkflow(req)
+	if err != nil {
+		http.Error(wr, err.Error(), status)
+		return
+	}
+	login, err := srv.authCache.Add(wf.Cmd().User, req.URL.Query())
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusNotFound)
+		return
+	}
+	go wf.Start(login, nil)
+	// redirect callback
 }
 
 func (srv *server) authCallbackURL(req *http.Request, wfID int) string {

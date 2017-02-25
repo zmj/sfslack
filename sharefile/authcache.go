@@ -2,13 +2,14 @@ package sharefile
 
 import (
 	"fmt"
+	"net/http/cookiejar"
 	"net/url"
 	"sync"
 )
 
 type AuthCache struct {
 	mu          *sync.Mutex
-	userLogins  map[interface{}]*userLogin
+	userLogins  map[interface{}]Login
 	oauthID     string
 	oauthSecret string
 }
@@ -16,45 +17,38 @@ type AuthCache struct {
 func NewAuthCache(oauthID, oauthSecret string) *AuthCache {
 	return &AuthCache{
 		mu:          &sync.Mutex{},
-		userLogins:  make(map[interface{}]*userLogin),
+		userLogins:  make(map[interface{}]Login),
 		oauthID:     oauthID,
 		oauthSecret: oauthSecret,
 	}
 }
 
-type userLogin struct {
-	login Login
-	token oauthToken
-}
-
 func (ac *AuthCache) TryGet(key interface{}) (Login, bool) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	userLogin, exists := ac.userLogins[key]
-	if !exists {
-		return Login{}, false
-	}
-	return userLogin.login, true
+	login, exists := ac.userLogins[key]
+	return login, exists
 }
 
-func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) error {
+func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) (Login, error) {
 	code, err := parseOAuthCode(oauthCode)
 	if err != nil {
-		return err
+		return Login{}, err
 	}
 	token, err := code.getToken(ac.oauthID, ac.oauthSecret)
 	if err != nil {
-		return err
+		return Login{}, err
 	}
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	userLogin := &userLogin{
-		token: token,
-		login: Login{},
+	cj, _ := cookiejar.New(nil)
+	login := Login{
+		token:   token,
+		cookies: cj,
 	}
-	ac.userLogins[key] = userLogin
+	ac.userLogins[key] = login
 	go ac.refreshLoop(key)
-	return nil
+	return login, nil
 }
 
 func (ac *AuthCache) LoginURL(callbackURL string) string {

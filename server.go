@@ -6,6 +6,10 @@ import (
 	"net/http/httputil"
 	"sync"
 
+	"strconv"
+
+	"errors"
+
 	"github.com/zmj/sfslack/secrets"
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
@@ -60,8 +64,30 @@ func newServer(secrets secrets.Secrets) *server {
 func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, error) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
-	srv.currentWorkflowID += 1
+	srv.currentWorkflowID++
 	return workflow.NewWorkflow(cmd, srv.currentWorkflowID)
+}
+
+func (srv *server) getWorkflow(req *http.Request) (workflow.Workflow, int, error) {
+	values, err := httpValues(req)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	wfidStr := values.Get(wfidQueryKey)
+	if wfidStr == "" {
+		return nil, http.StatusBadRequest, err
+	}
+	wfid, err := strconv.Atoi(wfidStr)
+	if err != nil {
+		return nil, http.StatusBadRequest, errors.New("Invalid wfID")
+	}
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	wf, exists := srv.workflows[wfid]
+	if !exists {
+		return nil, http.StatusNotFound, errors.New("Workflow not found")
+	}
+	return wf, http.StatusOK, nil
 }
 
 func printReq(wr http.ResponseWriter, req *http.Request) {

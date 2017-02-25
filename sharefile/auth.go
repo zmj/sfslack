@@ -31,6 +31,7 @@ type oauthCode struct {
 }
 
 type Login struct {
+	token   oauthToken
 	cookies *cookiejar.Jar
 }
 

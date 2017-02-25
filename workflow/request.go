@@ -13,7 +13,7 @@ type requestWorkflow struct {
 
 func newRequest(cmd slack.Command, id int) *requestWorkflow {
 	return &requestWorkflow{
-		wfBase: newBase(id),
+		wfBase: newBase(id, cmd),
 	}
 }
 

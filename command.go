@@ -18,10 +18,6 @@ const (
 	commandPath = "/sfslack/command"
 )
 
-var (
-	firstResponseTimeout = 2 * time.Second
-)
-
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	var respondErr error
 	defer logRespondError(respondErr)
@@ -64,7 +60,7 @@ func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) sla
 	case msg := <-response:
 		accepted <- nil
 		return msg
-	case <-time.After(firstResponseTimeout):
+	case <-time.After(2 * time.Second):
 		accepted <- errors.New("Timed out")
 		return workingMessage()
 	}

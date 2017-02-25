@@ -12,6 +12,7 @@ import (
 
 type Workflow interface {
 	ID() int // can this be at main?
+	Cmd() slack.Command
 	Start(login sharefile.Login, cb ResponseCallback)
 }
 

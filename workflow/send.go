@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"fmt"
+
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
@@ -12,7 +13,7 @@ type sendWorkflow struct {
 
 func newSend(cmd slack.Command, id int) *sendWorkflow {
 	return &sendWorkflow{
-		wfBase: newBase(id),
+		wfBase: newBase(id, cmd),
 	}
 }
 
