@@ -65,7 +65,12 @@ func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, error) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	srv.currentWorkflowID++
-	return workflow.NewWorkflow(cmd, srv.currentWorkflowID)
+	wf, err := workflow.NewWorkflow(cmd, srv.currentWorkflowID)
+	if err != nil {
+		return nil, err
+	}
+	srv.workflows[srv.currentWorkflowID] = wf
+	return wf, nil
 }
 
 func (srv *server) getWorkflow(req *http.Request) (workflow.Workflow, int, error) {
