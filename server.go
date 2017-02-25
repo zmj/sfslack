@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"sync"
 
 	"github.com/zmj/sfslack/secrets"
@@ -34,6 +35,7 @@ func main() {
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", printReq)
 	mux.HandleFunc(commandPath, srv.newCommand)
 	mux.HandleFunc(authPath, srv.authCallback)
 	mux.HandleFunc(eventPath, srv.eventCallback)
@@ -60,4 +62,10 @@ func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, error) {
 	defer srv.mu.Unlock()
 	srv.currentWorkflowID += 1
 	return workflow.NewWorkflow(cmd, srv.currentWorkflowID)
+}
+
+func printReq(wr http.ResponseWriter, req *http.Request) {
+	bytes, _ := httputil.DumpRequest(req, true)
+	fmt.Println(string(bytes))
+	http.Error(wr, "", http.StatusNotFound)
 }

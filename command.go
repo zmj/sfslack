@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 
 	"fmt"
@@ -19,17 +20,30 @@ const (
 
 var (
 	firstResponseTimeout = 2 * time.Second
-	helpMessage          = &slack.Message{}
-	workingMessage       = &slack.Message{}
 )
 
 func loginMessage(loginURL string) slack.Message {
 	return slack.Message{}
 }
 
+func helpMessage() slack.Message {
+	return slack.Message{
+		Text: "command args",
+	}
+}
+
+func workingMessage() slack.Message {
+	return slack.Message{
+		Text: "Logging you in...",
+	}
+}
+
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	var respondErr error
 	defer logRespondError(respondErr)
+
+	bytes, _ := httputil.DumpRequest(req, true)
+	fmt.Println(string(bytes))
 
 	cmd, err := parseCommand(req)
 	if err != nil {
@@ -39,7 +53,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	wr.Header().Add("Content-Type", "application/json")
 	wf, err := srv.newWorkflow(cmd)
 	if err != nil {
-		_, respondErr = helpMessage.WriteTo(wr)
+		_, respondErr = helpMessage().WriteTo(wr)
 		return
 	}
 	login, authFound := srv.authCache.TryGet(cmd.User)
@@ -68,7 +82,7 @@ func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) sla
 		return msg
 	case <-time.After(firstResponseTimeout):
 		accepted <- errors.New("Timed out")
-		return *workingMessage
+		return workingMessage()
 	}
 }
 

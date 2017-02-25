@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	secretsFile = "secrets"
+	secretsFile = "secrets.json"
 )
 
 type Secrets struct {

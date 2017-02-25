@@ -1,6 +1,7 @@
 package main
 
 import "net/http"
+import "net/http/httputil"
 import "fmt"
 
 const (
@@ -10,6 +11,9 @@ const (
 )
 
 func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
+	bytes, _ := httputil.DumpRequest(req, true)
+	fmt.Println(string(bytes))
+
 	// parse auth
 	// get wfid
 	// wfid -> user
