@@ -31,7 +31,10 @@ func (ac *AuthCache) TryGet(key interface{}) (Login, bool) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 	userLogin, exists := ac.userLogins[key]
-	return userLogin.login, exists
+	if !exists {
+		return Login{}, false
+	}
+	return userLogin.login, true
 }
 
 func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) error {

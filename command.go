@@ -22,22 +22,6 @@ var (
 	firstResponseTimeout = 2 * time.Second
 )
 
-func loginMessage(loginURL string) slack.Message {
-	return slack.Message{}
-}
-
-func helpMessage() slack.Message {
-	return slack.Message{
-		Text: "command args",
-	}
-}
-
-func workingMessage() slack.Message {
-	return slack.Message{
-		Text: "Logging you in...",
-	}
-}
-
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	var respondErr error
 	defer logRespondError(respondErr)
@@ -113,4 +97,20 @@ func logRespondError(err error) {
 		return
 	}
 	fmt.Printf("%v Response failure: %v", time.Now(), err.Error())
+}
+
+func loginMessage(loginURL string) slack.Message {
+	return slack.Message{}
+}
+
+func helpMessage() slack.Message {
+	return slack.Message{
+		Text: "command args",
+	}
+}
+
+func workingMessage() slack.Message {
+	return slack.Message{
+		Text: "Logging you in...",
+	}
 }
