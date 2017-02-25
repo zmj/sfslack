@@ -100,7 +100,9 @@ func logRespondError(err error) {
 }
 
 func loginMessage(loginURL string) slack.Message {
-	return slack.Message{}
+	return slack.Message{
+		Text: fmt.Sprintf("Please log in: %v", loginURL),
+	}
 }
 
 func helpMessage() slack.Message {
