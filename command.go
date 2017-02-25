@@ -39,7 +39,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	login, authFound := srv.authCache.TryGet(cmd.User)
 	var response slack.Message
 	if authFound {
-		response = startAuthenticatedWorkflow(wf, login)
+		response = startWorkflowForResponse(wf, login)
 	} else {
 		authCallbackURL := srv.authCallbackURL(req, wf.ID())
 		loginURL := srv.authCache.LoginURL(authCallbackURL)
@@ -48,14 +48,14 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	_, respondErr = response.WriteTo(wr)
 }
 
-func startAuthenticatedWorkflow(wf workflow.Workflow, login sharefile.Login) slack.Message {
+func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack.Message {
 	response := make(chan slack.Message, 1)
 	accepted := make(chan error, 1)
 	cb := func(msg slack.Message) error {
 		response <- msg
 		return <-accepted
 	}
-	go wf.Start(login, cb)
+	go wf.Start(login, cb, nil)
 	select {
 	case msg := <-response:
 		accepted <- nil

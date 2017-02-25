@@ -13,10 +13,13 @@ import (
 type Workflow interface {
 	ID() int // can this be at main?
 	Cmd() slack.Command
-	Start(login sharefile.Login, cb ResponseCallback)
+	Start(login sharefile.Login,
+		firstResponse ResponseCallback,
+		firstRedirect RedirectCallback)
 }
 
 type ResponseCallback func(slack.Message) error
+type RedirectCallback func(url string) error
 
 func NewWorkflow(cmd slack.Command, id int) (Workflow, error) {
 	// common construction?

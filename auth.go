@@ -1,8 +1,15 @@
 package main
 
-import "net/http"
-import "net/http/httputil"
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"time"
+
+	"github.com/zmj/sfslack/sharefile"
+	"github.com/zmj/sfslack/workflow"
+)
 
 const (
 	authPath         = "/sfslack/auth"
@@ -24,8 +31,30 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 		http.Error(wr, err.Error(), http.StatusNotFound)
 		return
 	}
-	go wf.Start(login, nil)
-	// redirect callback
+	redirectURL := startWorkflowForRedirect(wf, login)
+	if redirectURL == "" {
+		wr.Write([]byte("Logged in! You may close this page."))
+		return
+	}
+	http.Redirect(wr, req, redirectURL, http.StatusFound)
+}
+
+func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) string {
+	redirect := make(chan string, 1)
+	accepted := make(chan error, 1)
+	cb := func(url string) error {
+		redirect <- url
+		return <-accepted
+	}
+	go wf.Start(login, nil, cb)
+	select {
+	case url := <-redirect:
+		accepted <- nil
+		return url
+	case <-time.After(3 * time.Second):
+		accepted <- errors.New("Timed out")
+		return ""
+	}
 }
 
 func (srv *server) authCallbackURL(req *http.Request, wfID int) string {

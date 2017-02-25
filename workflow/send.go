@@ -17,6 +17,8 @@ func newSend(cmd slack.Command, id int) *sendWorkflow {
 	}
 }
 
-func (wf *sendWorkflow) Start(sf sharefile.Login, firstResponse ResponseCallback) {
+func (wf *sendWorkflow) Start(sf sharefile.Login,
+	firstResponse ResponseCallback,
+	firstRedirect RedirectCallback) {
 	fmt.Println("Send start!")
 }
