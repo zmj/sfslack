@@ -11,9 +11,9 @@ type sendWorkflow struct {
 	*wfBase
 }
 
-func newSend(cmd slack.Command, id int) *sendWorkflow {
+func newSend(wf *wfBase, cmd slack.Command) Workflow {
 	return &sendWorkflow{
-		wfBase: newBase(id, cmd),
+		wfBase: wf,
 	}
 }
 

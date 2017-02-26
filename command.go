@@ -31,7 +31,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 	wr.Header().Add("Content-Type", "application/json")
-	wf, err := srv.newWorkflow(cmd)
+	wf, wfID, err := srv.newWorkflow(cmd)
 	if err != nil {
 		_, respondErr = helpMessage().WriteTo(wr)
 		return
@@ -41,7 +41,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	if authFound {
 		response = startWorkflowForResponse(wf, login)
 	} else {
-		authCallbackURL := srv.authCallbackURL(req, wf.ID())
+		authCallbackURL := srv.authCallbackURL(req, wfID)
 		loginURL := srv.authCache.LoginURL(authCallbackURL)
 		response = loginMessage(loginURL)
 	}

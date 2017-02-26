@@ -12,9 +12,7 @@ import (
 )
 
 const (
-	authPath         = "/sfslack/auth"
-	publicHostHeader = "X-PUBLIC-HOST"
-	wfidQueryKey     = "wfid"
+	authPath = "/sfslack/auth"
 )
 
 func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
@@ -58,10 +56,7 @@ func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) strin
 }
 
 func (srv *server) authCallbackURL(req *http.Request, wfID int) string {
-	host := req.Header.Get(publicHostHeader)
-	if host == "" {
-		host = req.URL.Host
-	}
+	host := publicHost(req)
 	return fmt.Sprintf("https://%v%v?%v=%v",
 		host,
 		authPath,

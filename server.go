@@ -18,6 +18,9 @@ import (
 
 const (
 	listenport = 8080
+
+	publicHostHeader = "X-PUBLIC-HOST"
+	wfidQueryKey     = "wfid"
 )
 
 func main() {
@@ -61,16 +64,16 @@ func newServer(secrets secrets.Secrets) *server {
 	}
 }
 
-func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, error) {
+func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, int, error) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	srv.currentWorkflowID++
-	wf, err := workflow.NewWorkflow(cmd, srv.currentWorkflowID)
+	wf, err := workflow.NewWorkflow(cmd, "")
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 	srv.workflows[srv.currentWorkflowID] = wf
-	return wf, nil
+	return wf, srv.currentWorkflowID, nil
 }
 
 func (srv *server) getWorkflow(req *http.Request) (workflow.Workflow, int, error) {
@@ -93,6 +96,14 @@ func (srv *server) getWorkflow(req *http.Request) (workflow.Workflow, int, error
 		return nil, http.StatusNotFound, errors.New("Workflow not found")
 	}
 	return wf, http.StatusOK, nil
+}
+
+func publicHost(req *http.Request) string {
+	host := req.Header.Get(publicHostHeader)
+	if host == "" {
+		host = req.URL.Host
+	}
+	return host
 }
 
 func printReq(wr http.ResponseWriter, req *http.Request) {

@@ -8,22 +8,18 @@ import (
 )
 
 type wfBase struct {
-	id                 int
-	cmd                slack.Command
-	started            time.Time
-	delayedRepliesSent int
+	cmd            slack.Command
+	eventURL       string
+	started        time.Time
+	delayedReplies int
 }
 
-func newBase(id int, cmd slack.Command) *wfBase {
+func newBase(cmd slack.Command, eventURL string) *wfBase {
 	return &wfBase{
-		id:      id,
-		cmd:     cmd,
-		started: time.Now(),
+		cmd:      cmd,
+		eventURL: eventURL,
+		started:  time.Now(),
 	}
-}
-
-func (wf *wfBase) ID() int {
-	return wf.id
 }
 
 func (wf *wfBase) Cmd() slack.Command {
@@ -35,8 +31,7 @@ func errorMessage(err error) slack.Message {
 }
 
 func (wf *wfBase) respond(msg slack.Message) error {
-	// todo
-	return nil
+	return msg.RespondTo(wf.cmd)
 }
 
 func logRespondError(err error) {
@@ -61,6 +56,7 @@ func (wf *wfBase) firstReply(rcb ReplyCallbacks, msg slack.Message, url string) 
 	err := cb()
 	if err != nil {
 		err = wf.respond(msg)
+		wf.delayedReplies++
 	}
 	return err
 }

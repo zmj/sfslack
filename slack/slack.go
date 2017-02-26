@@ -1,8 +1,11 @@
 package slack
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -86,4 +89,31 @@ func (msg Message) WriteTo(wr io.Writer) (int64, error) {
 	}
 	written, err := wr.Write(toSend)
 	return int64(written), err
+}
+
+func (msg Message) RespondTo(cmd Command) error {
+	toSend, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST",
+		cmd.ResponseURL,
+		bytes.NewReader(toSend))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	hc := http.Client{}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(resp.Status)
+	}
+
+	return nil
 }

@@ -11,9 +11,9 @@ type requestWorkflow struct {
 	*wfBase
 }
 
-func newRequest(cmd slack.Command, id int) *requestWorkflow {
+func newRequest(wf *wfBase, cmd slack.Command) Workflow {
 	return &requestWorkflow{
-		wfBase: newBase(id, cmd),
+		wfBase: wf,
 	}
 }
 
