@@ -46,7 +46,7 @@ func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) strin
 		redirect <- url
 		return <-accepted
 	}
-	go wf.Start(login, nil, cb)
+	go wf.Start(login, workflow.ReplyCallbacks{Redirect: cb})
 	select {
 	case url := <-redirect:
 		accepted <- nil

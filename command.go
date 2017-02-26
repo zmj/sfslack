@@ -55,7 +55,7 @@ func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack
 		response <- msg
 		return <-accepted
 	}
-	go wf.Start(login, cb, nil)
+	go wf.Start(login, workflow.ReplyCallbacks{Message: cb})
 	select {
 	case msg := <-response:
 		accepted <- nil
