@@ -43,8 +43,8 @@ func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) (Login, error) {
 	defer ac.mu.Unlock()
 	cj, _ := cookiejar.New(nil)
 	login := Login{
-		token:   token,
-		cookies: cj,
+		oauthToken: token,
+		cookies:    cj,
 	}
 	ac.userLogins[key] = login
 	go ac.refreshLoop(key)

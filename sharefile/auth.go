@@ -31,11 +31,11 @@ type oauthCode struct {
 }
 
 type Login struct {
-	token   oauthToken
+	oauthToken
 	cookies *cookiejar.Jar
 }
 
-func (login Login) addCredentials(req *http.Request) *http.Request {
+func (login Login) withCredentials(req *http.Request) *http.Request {
 	// if no cookies: bearer auth header
 	// add cookie jar
 	return req
