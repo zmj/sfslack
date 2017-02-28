@@ -36,9 +36,9 @@ func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
 		return Folder{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req = sf.withCredentials(req)
+	hc := &http.Client{}
+	hc, req = sf.withCredentials(hc, req)
 
-	hc := http.Client{Jar: sf.cookies}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return Folder{}, err
@@ -64,9 +64,9 @@ func (sf Login) GetChildren(parentFolderId string) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	req = sf.withCredentials(req)
+	hc := &http.Client{}
+	hc, req = sf.withCredentials(hc, req)
 
-	hc := http.Client{Jar: sf.cookies}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, err

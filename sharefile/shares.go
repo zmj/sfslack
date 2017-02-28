@@ -33,9 +33,9 @@ func (sf Login) CreateShare(toCreate Share) (Share, error) {
 		return Share{}, err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req = sf.withCredentials(req)
+	hc := &http.Client{}
+	hc, req = sf.withCredentials(hc, req)
 
-	hc := http.Client{Jar: sf.cookies}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return Share{}, err

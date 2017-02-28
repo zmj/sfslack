@@ -35,14 +35,14 @@ type Login struct {
 	cookies *cookiejar.Jar
 }
 
-func (login Login) withCredentials(req *http.Request) *http.Request {
+func (login Login) withCredentials(cli *http.Client, req *http.Request) (*http.Client, *http.Request) {
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.Subdomain, login.APIControlPlane))
 	cookies := login.cookies.Cookies(url)
 	if len(cookies) == 0 {
 		req.Header.Add("Authorization", "Bearer "+login.oauthToken.AccessToken)
 	}
-	// jar added at httpclient
-	return req
+	cli.Jar = login.cookies
+	return nil, req
 }
 
 func parseOAuthCode(values url.Values) (oauthCode, error) {
