@@ -36,8 +36,12 @@ type Login struct {
 }
 
 func (login Login) withCredentials(req *http.Request) *http.Request {
-	// if no cookies: bearer auth header
-	// add cookie jar
+	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.Subdomain, login.APIControlPlane))
+	cookies := login.cookies.Cookies(url)
+	if len(cookies) == 0 {
+		req.Header.Add("Authorization", "Bearer "+login.oauthToken.AccessToken)
+	}
+	// jar added at httpclient
 	return req
 }
 
