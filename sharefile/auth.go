@@ -42,7 +42,7 @@ func (login Login) withCredentials(cli *http.Client, req *http.Request) (*http.C
 		req.Header.Add("Authorization", "Bearer "+login.oauthToken.AccessToken)
 	}
 	cli.Jar = login.cookies
-	return nil, req
+	return cli, req
 }
 
 func parseOAuthCode(values url.Values) (oauthCode, error) {
