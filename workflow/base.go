@@ -1,62 +1,57 @@
 package workflow
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/zmj/sfslack/slack"
 )
 
 type wfBase struct {
-	cmd            slack.Command
-	eventURL       string
-	started        time.Time
-	delayedReplies int
+	Args
+	started time.Time
+	done    chan struct{}
+	err     error
 }
 
-func newBase(cmd slack.Command, eventURL string) *wfBase {
+func newBase(args Args) *wfBase {
 	return &wfBase{
-		cmd:      cmd,
-		eventURL: eventURL,
-		started:  time.Now(),
+		Args:    args,
+		started: time.Now(),
+		done:    make(chan struct{}),
 	}
 }
 
-func (wf *wfBase) Cmd() slack.Command {
-	return wf.cmd
+func (wf *wfBase) reply(msg slack.Message) {
+	go wf.Reply(Response{Message: msg})
+}
+
+func (wf *wfBase) replyOrRedirect(msg slack.Message, url string) {
+	go wf.Reply(Response{Message: msg, URL: url})
+}
+
+func (wf *wfBase) fatal(err error) {
+	wf.err = err
+	go wf.Reply(errorResponse(err))
+	close(wf.done)
+}
+
+func errorResponse(err error) Response {
+	return Response{Message: errorMessage(err)}
 }
 
 func errorMessage(err error) slack.Message {
 	return slack.Message{Text: err.Error()}
 }
 
-func (wf *wfBase) respond(msg slack.Message) error {
-	return msg.RespondTo(wf.cmd)
+func (wf *wfBase) Done() <-chan struct{} {
+	return wf.done
 }
 
-func logRespondError(err error) {
-	if err == nil {
-		return
-	}
-	fmt.Printf("%v Response failure: %v", time.Now(), err.Error())
+func (wf *wfBase) Err() error {
+	return wf.err
 }
 
-func (wf *wfBase) firstReply(rcb ReplyCallbacks, msg slack.Message, url string) error {
-	var cb func() error
-	if rcb.Message != nil {
-		cb = func() error {
-			return rcb.Message(msg)
-		}
-	} else if rcb.Redirect != nil {
-		cb = func() error {
-			return rcb.Redirect(url)
-		}
-	}
-
-	err := cb()
-	if err != nil {
-		err = wf.respond(msg)
-		wf.delayedReplies++
-	}
-	return err
+func (wf *wfBase) Shutdown() {
+	panic(nil)
+	// todo
 }

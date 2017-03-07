@@ -1,34 +1,38 @@
 package workflow
 
 import (
-	"strings"
-
-	"fmt"
-
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
 
 type Workflow interface {
-	Cmd() slack.Command
-	Start(sf sharefile.Login, replyCbs ReplyCallbacks)
+	Setup() error
+	Done() <-chan struct{}
+	Err() error
+	Shutdown()
 }
 
-type ReplyCallbacks struct {
-	Message  func(slack.Message) error
-	Redirect func(string) error
+type Args struct {
+	Cmd      slack.Command
+	Sf       sharefile.Login
+	Reply    func(Response)
+	EventURL string
 }
 
-func NewWorkflow(cmd slack.Command, eventURL string) (Workflow, error) {
-	var constructor func(*wfBase, slack.Command) Workflow
-	switch strings.ToLower(cmd.Text) {
-	case "send":
-		constructor = newSend
-	case "request":
-		constructor = newRequest
-	default:
-		return nil, fmt.Errorf("Unknown command '%v'", cmd.Text)
-	}
-	wf := newBase(cmd, eventURL)
-	return constructor(wf, cmd), nil
+type Response struct {
+	slack.Message
+	URL string
+}
+
+type Constructor func(Args) Workflow
+
+type Definition struct {
+	Arg         string
+	Description string
+	Constructor Constructor
+}
+
+var Definitions = []Definition{
+	{"send", "Share Files", newSend},
+	{"request", "Request Files", newRequest},
 }

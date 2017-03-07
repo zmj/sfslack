@@ -3,7 +3,6 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 )
 
@@ -11,38 +10,32 @@ type sendWorkflow struct {
 	*wfBase
 }
 
-func newSend(wf *wfBase, cmd slack.Command) Workflow {
+func newSend(args Args) Workflow {
 	return &sendWorkflow{
-		wfBase: wf,
+		wfBase: newBase(args),
 	}
 }
 
-// setup? init?
-func (wf *sendWorkflow) Start(sf sharefile.Login, firstReply ReplyCallbacks) {
-	var respondErr error
-	defer logRespondError(respondErr)
-
-	folder, err := wf.createWorkflowFolder(sf)
+func (wf *sendWorkflow) Setup() error {
+	folder, err := wf.createWorkflowFolder()
 	if err != nil {
-		respondErr = wf.firstReply(firstReply, errorMessage(err), "")
-		return
+		wf.fatal(err)
+		return err
 	}
 	// go subscribe
-	requestShare, err := sf.CreateRequestShare(folder.ID)
+	requestShare, err := wf.Sf.CreateRequestShare(folder.ID)
 	if err != nil {
-		respondErr = wf.firstReply(firstReply, errorMessage(err), "")
-		return // cancel sub - context close?
+		wf.fatal(err)
+		return err // cancel sub - check done / shutdown called?
 	}
 	// wait for subscribe
 	uploadURL := requestShare.URI
-	respondErr = wf.firstReply(firstReply, wf.uploadMessage(uploadURL), uploadURL)
-	if respondErr != nil {
-		return
-	}
-
+	wf.replyOrRedirect(uploadMessage(uploadURL), uploadURL)
+	// go event loop
+	return nil
 }
 
-func (wf *sendWorkflow) uploadMessage(uploadURL string) slack.Message {
+func uploadMessage(uploadURL string) slack.Message {
 	return slack.Message{
 		Text: fmt.Sprintf("Upload your files: %v", uploadURL),
 	}
