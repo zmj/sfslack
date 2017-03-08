@@ -2,28 +2,74 @@ package wfutils
 
 import "github.com/zmj/sfslack/slack"
 import "github.com/zmj/sfslack/workflow"
+import "time"
 
-func (srv *server) startWorkflowForRedirect(builder *workflowBuilder) string {
-	return ""
+type Runner interface {
+	StartAndRedirect() string
+	StartAndRespond() slack.Message
+	Done() <-chan struct{}
 }
 
-func (srv *server) startWorkflowForResponse(builder *workflowBuilder) slack.Message {
-	return slack.Message{}
+func NewRunner(builder *Builder, cache *Cache) Runner {
+	return &runner{
+		builder:   builder,
+		cache:     cache,
+		responses: make(chan workflow.Response),
+		done:      make(chan struct{}),
+	}
+}
+
+func (r *runner) Done() <-chan struct{} {
+	return r.done
+}
+
+func (r *runner) StartAndRedirect() string {
+	redirect := make(chan string, 1)
+	r.redirect = redirect
+	accepted := make(chan bool, 1)
+	r.accepted = accepted
+	go r.run()
+	select {
+	case url := <-redirect:
+		accepted <- true
+		return url
+	case <-time.After(3 * time.Second):
+		accepted <- false
+		return ""
+	}
+}
+
+func (r *runner) StartAndRespond() slack.Message {
+	response := make(chan slack.Message, 1)
+	r.firstResponse = response
+	accepted := make(chan bool, 1)
+	r.accepted = accepted
+	go r.run()
+	select {
+	case msg := <-response:
+		accepted <- true
+		return msg
+	case <-time.After(slack.InitialReplyTimeout):
+		accepted <- false
+		return timeoutMessage()
+	}
 }
 
 type runner struct {
 	builder   *Builder
 	cache     *Cache
 	responses chan workflow.Response
-	// authcache?
+	done      chan struct{}
+	// authcache for logout?
 	redirect      chan<- string
 	firstResponse chan<- slack.Message
 	accepted      <-chan bool
+	// done callback?
 }
 
-func (r *runner) Run() {
+func (r *runner) run() {
 	r.builder.Reply = r.receive
-	wf := r.builder.definition.Constructor(*r.builder.Args)
+	wf := r.builder.Definition.Constructor(*r.builder.Args)
 	err := wf.Setup()
 	if err != nil {
 		// ??
@@ -64,42 +110,6 @@ func (r *runner) receive(resp workflow.Response) {
 	}()
 }
 
-/*
-func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack.Message {
-	response := make(chan slack.Message, 1)
-	accepted := make(chan error, 1)
-	cb := func(msg slack.Message) error {
-		response <- msg
-		return <-accepted
-	}
-	go wf.Start(login, workflow.ReplyCallbacks{Message: cb})
-	select {
-	case msg := <-response:
-		accepted <- nil
-		return msg
-	case <-time.After(2 * time.Second):
-		accepted <- errors.New("Timed out")
-		return workingMessage()
-	}
+func timeoutMessage() slack.Message {
+	return slack.Message{Text: "Logging you in..."}
 }
-*/
-
-/*
-func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) string {
-	redirect := make(chan string, 1)
-	accepted := make(chan error, 1)
-	cb := func(url string) error {
-		redirect <- url
-		return <-accepted
-	}
-	go wf.Start(login, workflow.ReplyCallbacks{Redirect: cb})
-	select {
-	case url := <-redirect:
-		accepted <- nil
-		return url
-	case <-time.After(3 * time.Second):
-		accepted <- errors.New("Timed out")
-		return ""
-	}
-}
-*/

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/zmj/sfslack/slack"
+	"github.com/zmj/sfslack/wfutils"
 	"github.com/zmj/sfslack/workflow"
 )
 
@@ -37,25 +38,26 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 
 	wr.Header().Add("Content-Type", "application/json")
 
-	builder := srv.wfCache.newBuilder(cmd)
+	builder := srv.wfCache.NewBuilder(cmd)
 	builder = withCallbackURLs(builder, publicHost(req))
 
 	def, ok := wfTypes[cmd.Text]
 	if !ok {
-		_, respondErr = helpMessage(builder.commandClickURL).WriteTo(wr)
+		_, respondErr = helpMessage(builder.CommandClickURL).WriteTo(wr)
 		return
 	}
-	builder.definition = def
+	builder.Definition = def
 
 	login, ok := srv.authCache.TryGet(cmd.User)
 	if !ok {
-		loginURL := srv.authCache.LoginURL(builder.authCallbackURL)
+		loginURL := srv.authCache.LoginURL(builder.AuthCallbackURL)
 		_, respondErr = loginMessage(loginURL).WriteTo(wr)
 		return
 	}
 	builder.Sf = login
 
-	msg := srv.startWorkflowForResponse()
+	runner := wfutils.NewRunner(builder, srv.wfCache)
+	msg := runner.StartAndRespond()
 	_, respondErr = msg.WriteTo(wr)
 }
 
@@ -76,22 +78,23 @@ func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	builder, ok := srv.wfCache.getBuilder(wfID)
+	builder, ok := srv.wfCache.GetBuilder(wfID)
 	if !ok {
 		http.Error(wr, "Unknown workflow ID", http.StatusInternalServerError)
 		return
 	}
-	builder.definition = def
+	builder.Definition = def
 
 	login, ok := srv.authCache.TryGet(builder.Cmd.User)
 	if !ok {
-		loginURL := srv.authCache.LoginURL(builder.authCallbackURL)
+		loginURL := srv.authCache.LoginURL(builder.AuthCallbackURL)
 		http.Redirect(wr, req, loginURL, http.StatusFound)
 		return
 	}
 	builder.Sf = login
 
-	redirectURL := srv.startWorkflowForRedirect()
+	runner := wfutils.NewRunner(builder, srv.wfCache)
+	redirectURL := runner.StartAndRedirect()
 	if redirectURL == "" {
 		wr.Write([]byte("Logged in! You may close this page."))
 		return
@@ -124,10 +127,10 @@ func helpMessage(wfClickURL string) slack.Message {
 	}
 }
 
-func withCallbackURLs(builder *workflowBuilder, host string) *workflowBuilder {
-	builder.authCallbackURL = authCallbackURL(host, builder.wfID)
-	builder.commandClickURL = commandClickURL(host, builder.wfID)
-	builder.EventURL = eventCallbackURL(host, builder.wfID)
+func withCallbackURLs(builder *wfutils.Builder, host string) *wfutils.Builder {
+	builder.AuthCallbackURL = authCallbackURL(host, builder.WfID)
+	builder.CommandClickURL = commandClickURL(host, builder.WfID)
+	builder.EventURL = eventCallbackURL(host, builder.WfID)
 	return builder
 }
 
@@ -137,10 +140,4 @@ func commandClickURL(host string, wfID int) string {
 		commandClickPath,
 		wfidQueryKey,
 		wfID)
-}
-
-func workingMessage() slack.Message {
-	return slack.Message{
-		Text: "Logging you in...",
-	}
 }

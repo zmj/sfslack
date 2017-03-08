@@ -28,7 +28,7 @@ type server struct {
 func newServer(secrets secrets.Secrets) *server {
 	return &server{
 		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
-		wfCache:   newWorkflowCache(),
+		wfCache:   wfutils.NewCache(),
 	}
 }
 

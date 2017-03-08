@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httputil"
+
+	"github.com/zmj/sfslack/wfutils"
 )
 
 const (
@@ -20,7 +22,7 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	builder, ok := srv.wfCache.getBuilder(wfID)
+	builder, ok := srv.wfCache.GetBuilder(wfID)
 	if !ok {
 		http.Error(wr, "Unknown workflow ID", http.StatusInternalServerError)
 		return
@@ -33,7 +35,8 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	}
 	builder.Sf = login
 
-	redirectURL := srv.startWorkflowForRedirect()
+	runner := wfutils.NewRunner(builder, srv.wfCache)
+	redirectURL := runner.StartAndRedirect()
 	if redirectURL == "" {
 		wr.Write([]byte("Logged in! You may close this page."))
 		return

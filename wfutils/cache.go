@@ -18,14 +18,14 @@ type Cache struct {
 
 type Builder struct {
 	*workflow.Args
-	wfID            int
+	WfID            int
 	started         time.Time
-	definition      workflow.Definition
-	commandClickURL string
-	authCallbackURL string
+	Definition      workflow.Definition
+	CommandClickURL string
+	AuthCallbackURL string
 }
 
-func newCache() *Cache {
+func NewCache() *Cache {
 	return &Cache{
 		mu:       &sync.Mutex{},
 		building: make(map[int]*Builder),
@@ -34,20 +34,20 @@ func newCache() *Cache {
 	// cleanup goroutine
 }
 
-func (c *Cache) newBuilder(cmd slack.Command) *Builder {
+func (c *Cache) NewBuilder(cmd slack.Command) *Builder {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.currentID++
 	builder := &Builder{
 		Args:    &workflow.Args{Cmd: cmd},
-		wfID:    c.currentID,
+		WfID:    c.currentID,
 		started: time.Now(),
 	}
 	c.building[c.currentID] = builder
 	return builder
 }
 
-func (c *Cache) getBuilder(wfID int) (*Builder, bool) {
+func (c *Cache) GetBuilder(wfID int) (*Builder, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	args, ok := c.building[wfID]
