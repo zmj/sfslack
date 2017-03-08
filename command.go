@@ -56,8 +56,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	}
 	builder.Sf = login
 
-	runner := wfutils.NewRunner(builder, srv.wfCache)
-	msg := runner.StartAndRespond()
+	msg := srv.startWorkflowForMessage(builder)
 	_, respondErr = msg.WriteTo(wr)
 }
 
@@ -93,8 +92,7 @@ func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
 	}
 	builder.Sf = login
 
-	runner := wfutils.NewRunner(builder, srv.wfCache)
-	redirectURL := runner.StartAndRedirect()
+	redirectURL := srv.startWorkflowForRedirect(builder)
 	if redirectURL == "" {
 		wr.Write([]byte("Logged in! You may close this page."))
 		return
@@ -112,7 +110,7 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 
 func loginMessage(loginURL string) slack.Message {
 	return slack.Message{
-		Text: fmt.Sprintf("Please log in: %v", loginURL),
+		Text: fmt.Sprintf("Please %v", slack.FormatURL(loginURL, "log in")),
 	}
 }
 

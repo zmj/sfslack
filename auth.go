@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-
-	"github.com/zmj/sfslack/wfutils"
 )
 
 const (
@@ -35,8 +33,7 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	}
 	builder.Sf = login
 
-	runner := wfutils.NewRunner(builder, srv.wfCache)
-	redirectURL := runner.StartAndRedirect()
+	redirectURL := srv.startWorkflowForRedirect(builder)
 	if redirectURL == "" {
 		wr.Write([]byte("Logged in! You may close this page."))
 		return

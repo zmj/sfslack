@@ -3,8 +3,6 @@ package wfutils
 import (
 	"sync"
 
-	"time"
-
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
 )
@@ -19,7 +17,6 @@ type Cache struct {
 type Builder struct {
 	*workflow.Args
 	WfID            int
-	started         time.Time
 	Definition      workflow.Definition
 	CommandClickURL string
 	AuthCallbackURL string
@@ -39,9 +36,8 @@ func (c *Cache) NewBuilder(cmd slack.Command) *Builder {
 	defer c.mu.Unlock()
 	c.currentID++
 	builder := &Builder{
-		Args:    &workflow.Args{Cmd: cmd},
-		WfID:    c.currentID,
-		started: time.Now(),
+		Args: &workflow.Args{Cmd: cmd},
+		WfID: c.currentID,
 	}
 	c.building[c.currentID] = builder
 	return builder
