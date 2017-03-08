@@ -5,7 +5,6 @@ import (
 	"net/http/httputil"
 
 	"fmt"
-	"time"
 
 	"strings"
 
@@ -100,39 +99,12 @@ func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
 	http.Redirect(wr, req, redirectURL, http.StatusFound)
 }
 
-/*
-func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack.Message {
-	response := make(chan slack.Message, 1)
-	accepted := make(chan error, 1)
-	cb := func(msg slack.Message) error {
-		response <- msg
-		return <-accepted
-	}
-	go wf.Start(login, workflow.ReplyCallbacks{Message: cb})
-	select {
-	case msg := <-response:
-		accepted <- nil
-		return msg
-	case <-time.After(2 * time.Second):
-		accepted <- errors.New("Timed out")
-		return workingMessage()
-	}
-}
-*/
-
 func parseCommand(req *http.Request) (slack.Command, error) {
 	values, err := httpValues(req)
 	if err != nil {
 		return slack.Command{}, err
 	}
 	return slack.ParseCommand(values)
-}
-
-func logRespondError(err error) {
-	if err == nil {
-		return
-	}
-	fmt.Printf("%v Response failure: %v", time.Now(), err.Error())
 }
 
 func loginMessage(loginURL string) slack.Message {
@@ -155,7 +127,7 @@ func helpMessage(wfClickURL string) slack.Message {
 func withCallbackURLs(builder *workflowBuilder, host string) *workflowBuilder {
 	builder.authCallbackURL = authCallbackURL(host, builder.wfID)
 	builder.commandClickURL = commandClickURL(host, builder.wfID)
-	builder.EventURL = "" // todo
+	builder.EventURL = eventCallbackURL(host, builder.wfID)
 	return builder
 }
 

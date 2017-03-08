@@ -41,25 +41,6 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	http.Redirect(wr, req, redirectURL, http.StatusFound)
 }
 
-/*
-func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) string {
-	redirect := make(chan string, 1)
-	accepted := make(chan error, 1)
-	cb := func(url string) error {
-		redirect <- url
-		return <-accepted
-	}
-	go wf.Start(login, workflow.ReplyCallbacks{Redirect: cb})
-	select {
-	case url := <-redirect:
-		accepted <- nil
-		return url
-	case <-time.After(3 * time.Second):
-		accepted <- errors.New("Timed out")
-		return ""
-	}
-}
-*/
 func authCallbackURL(host string, wfID int) string {
 	return fmt.Sprintf("https://%v%v?%v=%v",
 		host,

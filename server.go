@@ -13,30 +13,16 @@ import (
 	"github.com/zmj/sfslack/sharefile"
 )
 
-const (
-	listenport = 8080
+type server struct {
+	authCache *sharefile.AuthCache
+	wfCache   *workflowCache
+}
 
+const (
 	publicHostHeader = "X-PUBLIC-HOST"
 	wfidQueryKey     = "wfid"
 	wfTypeQueryKey   = "wftype"
 )
-
-func main() {
-	secrets, err := secrets.Load()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	srv := newServer(secrets)
-	err = (&http.Server{
-		Addr:    fmt.Sprintf(":%v", listenport),
-		Handler: srv.handler(),
-	}).ListenAndServe()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-}
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
@@ -46,11 +32,6 @@ func (srv *server) handler() http.Handler {
 	mux.HandleFunc(authPath, srv.authCallback)
 	mux.HandleFunc(eventPath, srv.eventCallback)
 	return mux
-}
-
-type server struct {
-	authCache *sharefile.AuthCache
-	wfCache   *workflowCache
 }
 
 func newServer(secrets secrets.Secrets) *server {

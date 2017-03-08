@@ -18,11 +18,10 @@ func (srv *server) eventCallback(wr http.ResponseWriter, req *http.Request) {
 	// wf.event()
 }
 
-func (srv *server) eventCallbackURL(req *http.Request, wfID int) string {
-	host := publicHost(req)
+func eventCallbackURL(host string, wfID int) string {
 	return fmt.Sprintf("https://%v%v?%v=%v",
 		host,
-		authPath,
+		eventPath,
 		wfidQueryKey,
 		wfID)
 }
