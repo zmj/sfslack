@@ -27,12 +27,11 @@ type Response struct {
 type Constructor func(Args) Workflow
 
 type Definition struct {
-	Arg         string
 	Description string
 	Constructor Constructor
 }
 
-var Definitions = []Definition{
-	{"send", "Share Files", newSend},
-	{"request", "Request Files", newRequest},
+var Definitions = struct{ Send, Request Definition }{
+	Send:    Definition{"Share Files", newSend},
+	Request: Definition{"Request Files", newRequest},
 }

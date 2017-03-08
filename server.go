@@ -1,19 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-	"sync"
+	"net/url"
 
 	"strconv"
 
-	"errors"
-
 	"github.com/zmj/sfslack/secrets"
 	"github.com/zmj/sfslack/sharefile"
-	"github.com/zmj/sfslack/slack"
-	"github.com/zmj/sfslack/workflow"
 )
 
 const (
@@ -21,6 +18,7 @@ const (
 
 	publicHostHeader = "X-PUBLIC-HOST"
 	wfidQueryKey     = "wfid"
+	wfTypeQueryKey   = "wftype"
 )
 
 func main() {
@@ -44,58 +42,52 @@ func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", printReq)
 	mux.HandleFunc(commandPath, srv.newCommand)
+	mux.HandleFunc(commandClickPath, srv.newCommandClick)
 	mux.HandleFunc(authPath, srv.authCallback)
 	mux.HandleFunc(eventPath, srv.eventCallback)
 	return mux
 }
 
 type server struct {
-	mu                *sync.Mutex
-	workflows         map[int]workflow.Workflow
-	currentWorkflowID int
-	authCache         *sharefile.AuthCache
+	authCache *sharefile.AuthCache
+	wfCache   *workflowCache
 }
 
 func newServer(secrets secrets.Secrets) *server {
 	return &server{
-		mu:        &sync.Mutex{},
-		workflows: make(map[int]workflow.Workflow),
 		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
+		wfCache:   newWorkflowCache(),
 	}
 }
 
-func (srv *server) newWorkflow(cmd slack.Command) (workflow.Workflow, int, error) {
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	srv.currentWorkflowID++
-	wf, err := workflow.NewWorkflow(cmd, "")
-	if err != nil {
-		return nil, -1, err
-	}
-	srv.workflows[srv.currentWorkflowID] = wf
-	return wf, srv.currentWorkflowID, nil
-}
-
-func (srv *server) getWorkflow(req *http.Request) (workflow.Workflow, int, error) {
+func workflowID(req *http.Request) (int, error) {
 	values, err := httpValues(req)
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return 0, errors.New("Missing wfID")
 	}
 	wfidStr := values.Get(wfidQueryKey)
 	if wfidStr == "" {
-		return nil, http.StatusBadRequest, err
+		return 0, errors.New("Missing wfID")
 	}
-	wfid, err := strconv.Atoi(wfidStr)
+	wfID, err := strconv.Atoi(wfidStr)
 	if err != nil {
-		return nil, http.StatusBadRequest, errors.New("Invalid wfID")
+		return wfID, errors.New("Invalid wfID")
 	}
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	wf, exists := srv.workflows[wfid]
-	if !exists {
-		return nil, http.StatusNotFound, errors.New("Workflow not found")
+	return wfID, nil
+}
+
+func httpValues(req *http.Request) (url.Values, error) {
+	if req.Method == "GET" {
+		return req.URL.Query(), nil
+	} else if req.Method == "POST" {
+		err := req.ParseForm()
+		if err != nil {
+			return url.Values{}, err
+		}
+		return req.PostForm, nil
+	} else {
+		return url.Values{}, fmt.Errorf("Unsupported HTTP method '%v'", req.Method)
 	}
-	return wf, http.StatusOK, nil
 }
 
 func publicHost(req *http.Request) string {
@@ -110,4 +102,11 @@ func printReq(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 	http.Error(wr, "", http.StatusNotFound)
+}
+
+func (srv *server) logErr(err error) {
+	if err == nil {
+		return
+	}
+	// todo
 }

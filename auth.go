@@ -1,14 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-	"time"
-
-	"github.com/zmj/sfslack/sharefile"
-	"github.com/zmj/sfslack/workflow"
 )
 
 const (
@@ -19,17 +14,26 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 
-	wf, status, err := srv.getWorkflow(req)
+	wfID, err := workflowID(req)
 	if err != nil {
-		http.Error(wr, err.Error(), status)
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-	login, err := srv.authCache.Add(wf.Cmd().User, req.URL.Query())
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusNotFound)
+
+	builder, ok := srv.wfCache.getBuilder(wfID)
+	if !ok {
+		http.Error(wr, "Unknown workflow ID", http.StatusInternalServerError)
 		return
 	}
-	redirectURL := startWorkflowForRedirect(wf, login)
+
+	login, err := srv.authCache.Add(builder.Cmd.User, req.URL.Query())
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	builder.Sf = login
+
+	redirectURL := srv.startWorkflowForRedirect()
 	if redirectURL == "" {
 		wr.Write([]byte("Logged in! You may close this page."))
 		return
@@ -37,6 +41,7 @@ func (srv *server) authCallback(wr http.ResponseWriter, req *http.Request) {
 	http.Redirect(wr, req, redirectURL, http.StatusFound)
 }
 
+/*
 func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) string {
 	redirect := make(chan string, 1)
 	accepted := make(chan error, 1)
@@ -54,9 +59,8 @@ func startWorkflowForRedirect(wf workflow.Workflow, login sharefile.Login) strin
 		return ""
 	}
 }
-
-func (srv *server) authCallbackURL(req *http.Request, wfID int) string {
-	host := publicHost(req)
+*/
+func authCallbackURL(host string, wfID int) string {
 	return fmt.Sprintf("https://%v%v?%v=%v",
 		host,
 		authPath,

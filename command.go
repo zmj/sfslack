@@ -1,26 +1,31 @@
 package main
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 
 	"fmt"
 	"time"
 
-	"github.com/zmj/sfslack/sharefile"
+	"strings"
+
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
 )
 
 const (
-	commandPath = "/sfslack/command"
+	commandPath      = "/sfslack/command"
+	commandClickPath = "/sfslack/command/click"
 )
+
+var wfTypes = map[string]workflow.Definition{
+	"send":    workflow.Definitions.Send,
+	"request": workflow.Definitions.Request,
+}
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	var respondErr error
-	defer logRespondError(respondErr)
+	defer srv.logErr(respondErr)
 
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
@@ -30,24 +35,72 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	wr.Header().Add("Content-Type", "application/json")
-	wf, wfID, err := srv.newWorkflow(cmd)
-	if err != nil {
-		_, respondErr = helpMessage().WriteTo(wr)
+
+	builder := srv.wfCache.newBuilder(cmd)
+	builder = withCallbackURLs(builder, publicHost(req))
+
+	def, ok := wfTypes[cmd.Text]
+	if !ok {
+		_, respondErr = helpMessage(builder.commandClickURL).WriteTo(wr)
 		return
 	}
-	login, authFound := srv.authCache.TryGet(cmd.User)
-	var response slack.Message
-	if authFound {
-		response = startWorkflowForResponse(wf, login)
-	} else {
-		authCallbackURL := srv.authCallbackURL(req, wfID)
-		loginURL := srv.authCache.LoginURL(authCallbackURL)
-		response = loginMessage(loginURL)
+	builder.definition = def
+
+	login, ok := srv.authCache.TryGet(cmd.User)
+	if !ok {
+		loginURL := srv.authCache.LoginURL(builder.authCallbackURL)
+		_, respondErr = loginMessage(loginURL).WriteTo(wr)
+		return
 	}
-	_, respondErr = response.WriteTo(wr)
+	builder.Sf = login
+
+	msg := srv.startWorkflowForResponse()
+	_, respondErr = msg.WriteTo(wr)
 }
 
+func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
+	bytes, _ := httputil.DumpRequest(req, true)
+	fmt.Println(string(bytes))
+
+	wfID, err := workflowID(req)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	wfType := req.URL.Query().Get(wfTypeQueryKey)
+	def, ok := wfTypes[wfType]
+	if !ok {
+		http.Error(wr, "Unknown workflow type", http.StatusBadRequest)
+		return
+	}
+
+	builder, ok := srv.wfCache.getBuilder(wfID)
+	if !ok {
+		http.Error(wr, "Unknown workflow ID", http.StatusInternalServerError)
+		return
+	}
+	builder.definition = def
+
+	login, ok := srv.authCache.TryGet(builder.Cmd.User)
+	if !ok {
+		loginURL := srv.authCache.LoginURL(builder.authCallbackURL)
+		http.Redirect(wr, req, loginURL, http.StatusFound)
+		return
+	}
+	builder.Sf = login
+
+	redirectURL := srv.startWorkflowForRedirect()
+	if redirectURL == "" {
+		wr.Write([]byte("Logged in! You may close this page."))
+		return
+	}
+	http.Redirect(wr, req, redirectURL, http.StatusFound)
+}
+
+/*
 func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack.Message {
 	response := make(chan slack.Message, 1)
 	accepted := make(chan error, 1)
@@ -65,6 +118,7 @@ func startWorkflowForResponse(wf workflow.Workflow, login sharefile.Login) slack
 		return workingMessage()
 	}
 }
+*/
 
 func parseCommand(req *http.Request) (slack.Command, error) {
 	values, err := httpValues(req)
@@ -72,20 +126,6 @@ func parseCommand(req *http.Request) (slack.Command, error) {
 		return slack.Command{}, err
 	}
 	return slack.ParseCommand(values)
-}
-
-func httpValues(req *http.Request) (url.Values, error) {
-	if req.Method == "GET" {
-		return req.URL.Query(), nil
-	} else if req.Method == "POST" {
-		err := req.ParseForm()
-		if err != nil {
-			return url.Values{}, err
-		}
-		return req.PostForm, nil
-	} else {
-		return url.Values{}, errors.New("Unsupported HTTP method " + req.Method)
-	}
 }
 
 func logRespondError(err error) {
@@ -101,10 +141,30 @@ func loginMessage(loginURL string) slack.Message {
 	}
 }
 
-func helpMessage() slack.Message {
-	return slack.Message{
-		Text: "command args",
+func helpMessage(wfClickURL string) slack.Message {
+	var links []string
+	for arg, def := range wfTypes {
+		link := fmt.Sprintf("%v&%v=%v", wfClickURL, wfTypeQueryKey, arg)
+		links = append(links, slack.FormatURL(link, def.Description))
 	}
+	return slack.Message{
+		Text: strings.Join(links, " | "),
+	}
+}
+
+func withCallbackURLs(builder *workflowBuilder, host string) *workflowBuilder {
+	builder.authCallbackURL = authCallbackURL(host, builder.wfID)
+	builder.commandClickURL = commandClickURL(host, builder.wfID)
+	builder.EventURL = "" // todo
+	return builder
+}
+
+func commandClickURL(host string, wfID int) string {
+	return fmt.Sprintf("https://%v%v?%v=%v",
+		host,
+		commandClickPath,
+		wfidQueryKey,
+		wfID)
 }
 
 func workingMessage() slack.Message {

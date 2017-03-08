@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -116,4 +117,8 @@ func (msg Message) RespondTo(cmd Command) error {
 	}
 
 	return nil
+}
+
+func FormatURL(url, display string) string {
+	return fmt.Sprintf("<%v|%v>", url, display)
 }
