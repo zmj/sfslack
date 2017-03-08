@@ -22,11 +22,11 @@ func newBase(args Args) *wfBase {
 }
 
 func (wf *wfBase) reply(msg slack.Message) {
-	go wf.Reply(Response{Message: msg})
+	go wf.Reply(Response{Msg: msg})
 }
 
 func (wf *wfBase) replyOrRedirect(msg slack.Message, url string) {
-	go wf.Reply(Response{Message: msg, URL: url})
+	go wf.Reply(Response{Msg: msg, URL: url})
 }
 
 func (wf *wfBase) fatal(err error) {
@@ -36,7 +36,7 @@ func (wf *wfBase) fatal(err error) {
 }
 
 func errorResponse(err error) Response {
-	return Response{Message: errorMessage(err)}
+	return Response{Msg: errorMessage(err)}
 }
 
 func errorMessage(err error) slack.Message {

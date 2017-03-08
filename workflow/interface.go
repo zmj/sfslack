@@ -20,7 +20,7 @@ type Args struct {
 }
 
 type Response struct {
-	slack.Message
+	Msg slack.Message
 	URL string
 }
 

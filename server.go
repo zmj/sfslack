@@ -11,18 +11,26 @@ import (
 
 	"github.com/zmj/sfslack/secrets"
 	"github.com/zmj/sfslack/sharefile"
+	"github.com/zmj/sfslack/wfutils"
 )
-
-type server struct {
-	authCache *sharefile.AuthCache
-	wfCache   *workflowCache
-}
 
 const (
 	publicHostHeader = "X-PUBLIC-HOST"
 	wfidQueryKey     = "wfid"
 	wfTypeQueryKey   = "wftype"
 )
+
+type server struct {
+	authCache *sharefile.AuthCache
+	wfCache   *wfutils.Cache
+}
+
+func newServer(secrets secrets.Secrets) *server {
+	return &server{
+		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
+		wfCache:   newWorkflowCache(),
+	}
+}
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
@@ -32,13 +40,6 @@ func (srv *server) handler() http.Handler {
 	mux.HandleFunc(authPath, srv.authCallback)
 	mux.HandleFunc(eventPath, srv.eventCallback)
 	return mux
-}
-
-func newServer(secrets secrets.Secrets) *server {
-	return &server{
-		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
-		wfCache:   newWorkflowCache(),
-	}
 }
 
 func workflowID(req *http.Request) (int, error) {
