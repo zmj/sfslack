@@ -9,19 +9,16 @@ import (
 
 	"strconv"
 
-	"time"
+	"sync"
 
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
-	"github.com/zmj/sfslack/workflow"
-	"sync"
 )
 
 const (
 	publicHostHeader = "X-PUBLIC-HOST"
 	wfidQueryKey     = "wfid"
 	wfTypeQueryKey   = "wftype"
-	redirectTimeout  = 3 * time.Second
 )
 
 type server struct {
@@ -30,20 +27,20 @@ type server struct {
 }
 
 type wfCache struct {
-	mu &sync.Mutex
-	wfID int
-	runners map[int] *runner
+	mu      *sync.Mutex
+	wfID    int
+	runners map[int]*runner
 }
 
-func NewServer(cfg config) (*http.Server, error) {
+func NewServer(cfg Config) (*http.Server, error) {
 	err := cfg.validate()
 	if err != nil {
 		return nil, err
 	}
 	srv := &Server{
 		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
-		workflows:   &wfCache{
-			mu: &sync.Mutex{},
+		workflows: &wfCache{
+			mu:      &sync.Mutex{},
 			runners: make(map[int]*runner),
 		},
 	}
@@ -60,6 +57,7 @@ func (srv *server) handler() http.Handler {
 	mux.HandleFunc(commandClickPath, srv.wfHandler(srv.newCommandClick))
 	mux.HandleFunc(authPath, srv.wfHandler(srv.authCallback))
 	mux.HandleFunc(eventPath, srv.wfHandler(srv.eventCallback))
+	mux.HandleFunc(redirectPath, srv.wfHandler(srv.redirect))
 	return mux
 }
 

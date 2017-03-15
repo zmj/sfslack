@@ -17,19 +17,13 @@ type runner struct {
 	redirect *redirect
 }
 
-type redirect struct {
-	done chan struct{}
-	url  string
-	err  error
-}
-
 func newRunner(cmd slack.Command, id int) *runner {
-	return &runner {
-		mu: &sync.Mutex{},
+	return &runner{
+		mu:   &sync.Mutex{},
 		wfID: id,
-		cmd: cmd,
+		cmd:  cmd,
 		redirect: &redirect{
-			done: make(chan struct{})
+			done: make(chan struct{}),
 		},
 	}
 }

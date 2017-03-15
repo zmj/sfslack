@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/zmj/sfslack/slack"
-	"github.com/zmj/sfslack/wfutils"
 	"github.com/zmj/sfslack/workflow"
 )
 
