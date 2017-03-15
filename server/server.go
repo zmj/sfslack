@@ -11,7 +11,6 @@ import (
 
 	"time"
 
-	"github.com/zmj/sfslack/secrets"
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/wfutils"
@@ -30,13 +29,13 @@ type server struct {
 	wfCache   *wfutils.Cache
 }
 
-func NewServer(secrets secrets.Secrets, port int) *http.Server {
+func NewServer(cfg config) *http.Server {
 	srv := &Server{
-		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
+		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
 		wfCache:   wfutils.NewCache(),
 	}
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%v", port),
+		Addr:    fmt.Sprintf(":%v", cfg.Port),
 		Handler: srv.handler(),
 	}
 }

@@ -3,21 +3,19 @@ package main
 import (
 	"fmt"
 
-	"github.com/zmj/sfslack/secrets"
+	"flag"
+
 	"github.com/zmj/sfslack/server"
 )
 
-const (
-	listenport = 8080
-)
-
 func main() {
-	secrets, err := secrets.Load()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	srv := server.NewServer(secrets)
+	cfg := server.Config{}
+	flag.IntVar(&cfg.Port, "port", 8080, "Listen Port")
+	flag.StringVar(&cfg.OAuthID, "oauthid", "", "OAuth Client ID")
+	flag.StringVar(&cfg.OAuthSecret, "oauthsecret", "" "OAuth Client Secret")
+	flag.Parse()
+
+	srv := server.NewServer(cfg)
 	err = srv.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
