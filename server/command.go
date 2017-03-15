@@ -17,7 +17,7 @@ const (
 	commandClickPath = "/sfslack/command/click"
 )
 
-var wfTypes = map[string]workflow.Definition{
+var wfTypes = map[string]*workflow.Definition{
 	"send":    workflow.Definitions.Send,
 	"request": workflow.Definitions.Request,
 }
@@ -59,15 +59,9 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	_, respondErr = msg.WriteTo(wr)
 }
 
-func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
+func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
-
-	wfID, err := workflowID(req)
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	wfType := req.URL.Query().Get(wfTypeQueryKey)
 	def, ok := wfTypes[wfType]
@@ -75,28 +69,8 @@ func (srv *server) newCommandClick(wr http.ResponseWriter, req *http.Request) {
 		http.Error(wr, "Unknown workflow type", http.StatusBadRequest)
 		return
 	}
-
-	builder, ok := srv.wfCache.GetBuilder(wfID)
-	if !ok {
-		http.Error(wr, "Unknown workflow ID", http.StatusInternalServerError)
-		return
-	}
-	builder.Definition = def
-
-	login, ok := srv.authCache.TryGet(builder.Cmd.User)
-	if !ok {
-		loginURL := srv.authCache.LoginURL(builder.AuthCallbackURL)
-		http.Redirect(wr, req, loginURL, http.StatusFound)
-		return
-	}
-	builder.Sf = login
-
-	redirectURL := srv.startWorkflowForRedirect(builder)
-	if redirectURL == "" {
-		wr.Write([]byte("Logged in! You may close this page."))
-		return
-	}
-	http.Redirect(wr, req, redirectURL, http.StatusFound)
+	wf.SetDefinition(def)
+	srv.redirect(wf, wr, req)
 }
 
 func parseCommand(req *http.Request) (slack.Command, error) {

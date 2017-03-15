@@ -9,7 +9,7 @@ import (
 
 type AuthCache struct {
 	mu          *sync.Mutex
-	userLogins  map[interface{}]Login
+	userLogins  map[interface{}]*Login
 	oauthID     string
 	oauthSecret string
 }
@@ -17,32 +17,32 @@ type AuthCache struct {
 func NewAuthCache(oauthID, oauthSecret string) *AuthCache {
 	return &AuthCache{
 		mu:          &sync.Mutex{},
-		userLogins:  make(map[interface{}]Login),
+		userLogins:  make(map[interface{}]*Login),
 		oauthID:     oauthID,
 		oauthSecret: oauthSecret,
 	}
 }
 
-func (ac *AuthCache) TryGet(key interface{}) (Login, bool) {
+func (ac *AuthCache) TryGet(key interface{}) (*Login, bool) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 	login, exists := ac.userLogins[key]
 	return login, exists
 }
 
-func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) (Login, error) {
+func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) (*Login, error) {
 	code, err := parseOAuthCode(oauthCode)
 	if err != nil {
-		return Login{}, err
+		return nil, err
 	}
 	token, err := code.getToken(ac.oauthID, ac.oauthSecret)
 	if err != nil {
-		return Login{}, err
+		return nil, err
 	}
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 	cj, _ := cookiejar.New(nil)
-	login := Login{
+	login := &Login{
 		oauthToken: token,
 		cookies:    cj,
 	}

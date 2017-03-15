@@ -31,7 +31,7 @@ type Definition struct {
 	Constructor Constructor
 }
 
-var Definitions = struct{ Send, Request Definition }{
-	Send:    Definition{"Share Files", newSend},
-	Request: Definition{"Request Files", newRequest},
+var Definitions = struct{ Send, Request *Definition }{
+	Send:    &Definition{"Share Files", newSend},
+	Request: &Definition{"Request Files", newRequest},
 }

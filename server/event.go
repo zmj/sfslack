@@ -8,7 +8,7 @@ const (
 	eventPath = "/sfslack/event"
 )
 
-func (srv *server) eventCallback(wr http.ResponseWriter, req *http.Request) {
+func (srv *server) eventCallback(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 

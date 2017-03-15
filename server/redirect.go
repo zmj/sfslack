@@ -19,13 +19,14 @@ type redirect struct {
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	var url string
+	redir := wf.Redirect()
 	select {
-	case <-wf.redirect.done:
-		url, err := wf.redirect.url, wf.redirect.err
-		if err != nil {
-			http.Error(wr, err.Error(), http.StatusInternalServerError)
+	case <-redir.done:
+		if redir.err != nil {
+			http.Error(wr, redir.err.Error(), http.StatusInternalServerError)
 			return
 		}
+		url = redir.url
 	case <-time.After(redirectTimeout):
 		url = waitURL(publicHost(req), wf.wfID)
 	}

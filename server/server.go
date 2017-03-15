@@ -37,7 +37,7 @@ func NewServer(cfg Config) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	srv := &Server{
+	srv := &server{
 		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
 		workflows: &wfCache{
 			mu:      &sync.Mutex{},
@@ -86,7 +86,7 @@ func (c *wfCache) new(cmd slack.Command) *runner {
 	return r
 }
 
-func (c *wfCache) get(int wfID) (*runner, bool) {
+func (c *wfCache) get(wfID int) (*runner, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	r, ok := c.runners[wfID]
