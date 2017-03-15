@@ -12,7 +12,7 @@ func main() {
 	cfg := server.Config{}
 	flag.IntVar(&cfg.Port, "port", 8080, "Listen Port")
 	flag.StringVar(&cfg.OAuthID, "oauthid", "", "OAuth Client ID")
-	flag.StringVar(&cfg.OAuthSecret, "oauthsecret", "" "OAuth Client Secret")
+	flag.StringVar(&cfg.OAuthSecret, "oauthsecret", "", "OAuth Client Secret")
 	flag.Parse()
 
 	srv, err := server.NewServer(cfg)

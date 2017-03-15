@@ -37,26 +37,17 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 
 	wr.Header().Add("Content-Type", "application/json")
 
-	builder := srv.wfCache.NewBuilder(cmd)
-	builder = withCallbackURLs(builder, publicHost(req))
+	wf := srv.workflows.new(cmd)
 
 	def, ok := wfTypes[cmd.Text]
 	if !ok {
-		_, respondErr = helpMessage(builder.CommandClickURL).WriteTo(wr)
+		url := commandClickURL(publicHost(req), wf.wfID)
+		_, respondErr = helpMessage(url).WriteTo(wr)
 		return
 	}
-	builder.Definition = def
+	wf.SetDefinition(def)
 
-	login, ok := srv.authCache.TryGet(cmd.User)
-	if !ok {
-		loginURL := srv.authCache.LoginURL(builder.AuthCallbackURL)
-		_, respondErr = loginMessage(loginURL).WriteTo(wr)
-		return
-	}
-	builder.Sf = login
-
-	msg := srv.startWorkflowForMessage(builder)
-	_, respondErr = msg.WriteTo(wr)
+	panic("wf auth msg")
 }
 
 func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http.Request) {
@@ -96,13 +87,6 @@ func helpMessage(wfClickURL string) slack.Message {
 	return slack.Message{
 		Text: strings.Join(links, " | "),
 	}
-}
-
-func withCallbackURLs(builder *wfutils.Builder, host string) *wfutils.Builder {
-	builder.AuthCallbackURL = authCallbackURL(host, builder.WfID)
-	builder.CommandClickURL = commandClickURL(host, builder.WfID)
-	builder.EventURL = eventCallbackURL(host, builder.WfID)
-	return builder
 }
 
 func commandClickURL(host string, wfID int) string {
