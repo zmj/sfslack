@@ -15,7 +15,7 @@ func main() {
 	flag.StringVar(&cfg.OAuthSecret, "oauthsecret", "" "OAuth Client Secret")
 	flag.Parse()
 
-	srv := server.NewServer(cfg)
+	srv, err := server.NewServer(cfg)
 	err = srv.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)

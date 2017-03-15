@@ -29,12 +29,16 @@ type server struct {
 	wfCache   *wfutils.Cache
 }
 
-func NewServer(cfg config) *http.Server {
+func NewServer(cfg config) (*http.Server, error) {
+	err := cfg.validate()
+	if err != nil {
+		return nil, err
+	}
 	srv := &Server{
 		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
 		wfCache:   wfutils.NewCache(),
 	}
-	return &http.Server{
+	return nil, &http.Server{
 		Addr:    fmt.Sprintf(":%v", cfg.Port),
 		Handler: srv.handler(),
 	}
