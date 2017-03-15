@@ -13,8 +13,8 @@ import (
 
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
-	"github.com/zmj/sfslack/wfutils"
 	"github.com/zmj/sfslack/workflow"
+	"sync"
 )
 
 const (
@@ -26,7 +26,13 @@ const (
 
 type server struct {
 	authCache *sharefile.AuthCache
-	wfCache   *wfutils.Cache
+	workflows *wfCache
+}
+
+type wfCache struct {
+	mu &sync.Mutex
+	wfID int
+	runners map[int] *runner
 }
 
 func NewServer(cfg config) (*http.Server, error) {
@@ -36,12 +42,15 @@ func NewServer(cfg config) (*http.Server, error) {
 	}
 	srv := &Server{
 		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
-		wfCache:   wfutils.NewCache(),
+		wfCache:   &wfCache{
+			mu: &sync.Mutex{},
+			runners: make(map[int]*runner),
+		},
 	}
-	return nil, &http.Server{
+	return &http.Server{
 		Addr:    fmt.Sprintf(":%v", cfg.Port),
 		Handler: srv.handler(),
-	}
+	}, nil
 }
 
 func (srv *server) handler() http.Handler {
@@ -54,51 +63,16 @@ func (srv *server) handler() http.Handler {
 	return mux
 }
 
-func (srv *server) startWorkflowForRedirect(builder *wfutils.Builder) string {
-	resp, ok := srv.startWorkflow(builder, redirectTimeout)
-	if !ok {
-		return ""
-	}
-	return resp.URL
+func (c *wfCache) new(cmd slack.Command) *runner {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.wfID++
+	r := newRunner(cmd, c.wfID)
+	c.runners[c.wfID] = r
+	return r
 }
 
-func (srv *server) startWorkflowForMessage(builder *wfutils.Builder) slack.Message {
-	resp, ok := srv.startWorkflow(builder, slack.InitialReplyTimeout)
-	if !ok {
-		return timeoutMessage()
-	}
-	return resp.Msg
-}
-
-// move to runner?
-func (srv *server) startWorkflow(builder *wfutils.Builder, timeout time.Duration) (workflow.Response, bool) {
-	runner := wfutils.NewRunner(builder, srv.wfCache)
-	response := make(chan workflow.Response, 1)
-	accepted := make(chan bool, 1)
-	cb := func(resp workflow.Response) bool {
-		response <- resp
-		return <-accepted
-	}
-	go func() {
-		err := runner.Run(cb)
-		srv.logErr(err)
-		// cleanup wf id
-	}()
-	select {
-	case resp := <-response:
-		accepted <- true
-		return resp, true
-	case <-time.After(timeout):
-		accepted <- false
-		return workflow.Response{}, false
-	}
-}
-
-func timeoutMessage() slack.Message {
-	return slack.Message{Text: "Logging you in..."}
-}
-
-func workflowID(req *http.Request) (int, error) {
+func wfID(req *http.Request) (int, error) {
 	values, err := httpValues(req)
 	if err != nil {
 		return 0, errors.New("Missing wfID")
