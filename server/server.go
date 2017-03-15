@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"errors"
@@ -30,10 +30,14 @@ type server struct {
 	wfCache   *wfutils.Cache
 }
 
-func newServer(secrets secrets.Secrets) *server {
-	return &server{
+func NewServer(secrets secrets.Secrets, port int) *http.Server {
+	srv := &Server{
 		authCache: sharefile.NewAuthCache(secrets.OAuthID, secrets.OAuthSecret),
 		wfCache:   wfutils.NewCache(),
+	}
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%v", port),
+		Handler: srv.handler(),
 	}
 }
 
