@@ -6,9 +6,9 @@ type requestWorkflow struct {
 	*wfBase
 }
 
-func newRequest(args Args) Workflow {
+func newRequest(host Host) Workflow {
 	return &requestWorkflow{
-		wfBase: newBase(args),
+		wfBase: newBase(host),
 	}
 }
 

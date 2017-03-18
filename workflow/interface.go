@@ -12,19 +12,14 @@ type Workflow interface {
 	Shutdown()
 }
 
-type Args struct {
-	Cmd      slack.Command
-	Sf       sharefile.Login
-	Reply    func(Response)
-	EventURL string
+type Host interface {
+	Authenticate() *sharefile.Login
+	Reply(slack.Message)
+	RedirectOrReply(string, slack.Message)
+	Name() string
 }
 
-type Response struct {
-	Msg slack.Message
-	URL string
-}
-
-type Constructor func(Args) Workflow
+type Constructor func(Host) Workflow
 
 type Definition struct {
 	Description string

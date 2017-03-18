@@ -10,9 +10,9 @@ type sendWorkflow struct {
 	*wfBase
 }
 
-func newSend(args Args) Workflow {
+func newSend(host Host) Workflow {
 	return &sendWorkflow{
-		wfBase: newBase(args),
+		wfBase: newBase(host),
 	}
 }
 
@@ -23,14 +23,15 @@ func (wf *sendWorkflow) Setup() error {
 		return err
 	}
 	// go subscribe
-	requestShare, err := wf.Sf.CreateRequestShare(folder.ID)
+	requestShare, err := wf.sf.CreateRequestShare(folder.ID)
 	if err != nil {
 		wf.fatal(err)
 		return err // cancel sub - check done / shutdown called?
 	}
 	// wait for subscribe
 	uploadURL := requestShare.URI
-	wf.replyOrRedirect(uploadMessage(uploadURL), uploadURL)
+	wf.RedirectOrReply(uploadURL, uploadMessage(uploadURL))
+
 	// go event loop
 	return nil
 }

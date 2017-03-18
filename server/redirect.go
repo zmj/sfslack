@@ -1,14 +1,12 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 )
 
 const (
 	redirectTimeout = 3 * time.Second
-	redirectPath    = "/sfslack/wait"
 )
 
 type redirect struct {
@@ -36,12 +34,4 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		return
 	}
 	http.Redirect(wr, req, url, http.StatusFound)
-}
-
-func waitURL(host string, wfID int) string {
-	return fmt.Sprintf("https://%v%v?%v=%v",
-		host,
-		redirectPath,
-		wfidQueryKey,
-		wfID)
 }

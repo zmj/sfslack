@@ -27,7 +27,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 
 	wr.Header().Add("Content-Type", "application/json")
 
-	wf := srv.workflows.new(cmd)
+	wf := srv.new(cmd)
 
 	def, ok := wfTypes[cmd.Text]
 	if !ok {
