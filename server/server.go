@@ -64,6 +64,21 @@ func (srv *server) wfHandler(h func(*runner, http.ResponseWriter, *http.Request)
 	}
 }
 
+func (srv *server) get(wfID int) (*runner, bool) {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	r, ok := srv.workflows[wfID]
+	return r, ok
+}
+
+func (srv *server) put(r *runner) {
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+	srv.wfID++
+	r.wfID = srv.wfID
+	srv.workflows[srv.wfID] = r
+}
+
 func printReq(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))

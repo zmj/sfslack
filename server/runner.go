@@ -10,33 +10,20 @@ import (
 )
 
 type runner struct {
-	srv        *server
-	mu         *sync.Mutex
-	wfID       int
-	cmd        slack.Command
-	def        *workflow.Definition
-	defWait    chan *workflow.Definition
-	login      *sharefile.Login
-	loginWait  chan *sharefile.Login
-	firstReply chan slack.Message
-	wf         workflow.Workflow
-	urls       callbackURLs
-	next       *redirect
-}
-
-func (srv *server) get(wfID int) (*runner, bool) {
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	r, ok := srv.workflows[wfID]
-	return r, ok
-}
-
-func (srv *server) put(r *runner) {
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	srv.wfID++
-	r.wfID = srv.wfID
-	srv.workflows[srv.wfID] = r
+	srv             *server
+	mu              *sync.Mutex
+	wfID            int
+	cmd             slack.Command
+	defWait         chan *workflow.Definition
+	login           *sharefile.Login
+	loginWait       chan *sharefile.Login
+	firstReply      chan slack.Message
+	deferredReplies int
+	repliesFromWf   chan slack.Message // to response?
+	wf              workflow.Workflow
+	urls            callbackURLs
+	done            chan error
+	next            *redirect
 }
 
 func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) {
@@ -46,7 +33,7 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 	srv.put(r)
 	r.urls = srv.callbackURLs(host, r.wfID)
 	go r.run()
-	return r, slack.Message{}
+	return r, <-r.firstReply
 }
 
 func (r *runner) run() {
@@ -54,7 +41,7 @@ func (r *runner) run() {
 	if !ok {
 		r.defWait = make(chan *workflow.Definition, 1)
 		msg := helpMessage(r.urls.CommandClick)
-		r.Reply(msg)
+		r.reply(msg)
 		def = <-r.defWait
 	}
 
@@ -73,18 +60,38 @@ func (r *runner) run() {
 		r.srv.logErr(err)
 		return
 	}
+
+	for r.deferredReplies < slack.MaxDelayedReplies {
+		select {
+		case msg := <-r.repliesFromWf:
+			r.reply(msg)
+		// shutdown
+		case err = <-r.done:
+			if err != nil {
+				r.srv.logErr(err)
+			}
+			return
+		}
+	}
+	r.wf.Shutdown()
 }
 
-func (r *runner) Reply(msg slack.Message) {
+func (r *runner) reply(msg slack.Message) {
 	if r.firstReply != nil {
 		r.firstReply <- msg
 		return
 	}
+
 	err := msg.RespondTo(r.cmd)
 	if err != nil {
 		r.srv.logErr(err)
 	}
 	// clear redirect?
+	r.deferredReplies++
+}
+
+func (r *runner) Reply(msg slack.Message) {
+	r.repliesFromWf <- msg
 }
 
 func (r *runner) RedirectOrReply(url string, msg slack.Message) {
