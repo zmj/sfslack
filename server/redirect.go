@@ -17,7 +17,7 @@ type redirect struct {
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	var url string
-	redir := wf.Redirect()
+	redir := wf.NextRedirect()
 	select {
 	case <-redir.done:
 		if redir.err != nil {
@@ -26,7 +26,7 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		}
 		url = redir.url
 	case <-time.After(redirectTimeout):
-		url = waitURL(publicHost(req), wf.wfID)
+		url = wf.urls.Waiting
 	}
 
 	if url == "" {

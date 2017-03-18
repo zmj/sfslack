@@ -19,6 +19,8 @@ type runner struct {
 	login      *sharefile.Login
 	loginWait  chan *sharefile.Login
 	firstReply chan slack.Message
+	wf         workflow.Workflow
+	urls       callbackURLs
 	next       *redirect
 }
 
@@ -37,11 +39,12 @@ func (srv *server) put(r *runner) {
 	srv.workflows[srv.wfID] = r
 }
 
-func (srv *server) new(cmd slack.Command) (*runner, slack.Message) {
+func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) {
 	r := &runner{
 		cmd: cmd,
 	}
 	srv.put(r)
+	r.urls = srv.callbackURLs(host, r.wfID)
 	go r.run()
 	return r, slack.Message{}
 }
@@ -50,17 +53,26 @@ func (r *runner) run() {
 	def, ok := wfTypes[r.cmd.Text]
 	if !ok {
 		r.defWait = make(chan *workflow.Definition, 1)
-		// Reply(helpmsg)
+		msg := helpMessage(r.urls.CommandClick)
+		r.Reply(msg)
 		def = <-r.defWait
 	}
 
-	login, ok := r.srv.authCache.TryGet(r.cmd.User)
+	r.login, ok = r.srv.authCache.TryGet(r.cmd.User)
 	if !ok {
 		r.loginWait = make(chan *sharefile.Login, 1)
-		// RedirectOrReply(authmsg)
-		login = <-r.loginWait
+		msg := loginMessage(r.urls.AuthCallback)
+		r.RedirectOrReply(r.urls.AuthCallback, msg)
+		r.login = <-r.loginWait
 	}
 
+	r.wf = def.Constructor(r)
+	err := r.wf.Setup()
+	if err != nil {
+		r.Reply(errorMessage(err))
+		r.srv.logErr(err)
+		return
+	}
 }
 
 func (r *runner) Reply(msg slack.Message) {
@@ -69,14 +81,13 @@ func (r *runner) Reply(msg slack.Message) {
 		return
 	}
 	err := msg.RespondTo(r.cmd)
+	if err != nil {
+		r.srv.logErr(err)
+	}
 	// clear redirect?
 }
 
-func (r *runner) Redirect(url string) {
-
-}
-
-func (r *runner) RedirectOrReply(msg slack.Message, url string) {
+func (r *runner) RedirectOrReply(url string, msg slack.Message) {
 
 }
 
@@ -87,25 +98,19 @@ func (r *runner) NextRedirect() *redirect {
 }
 
 func (r *runner) SetDefinition(def *workflow.Definition) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.def != nil {
+	c := r.defWait
+	if c == nil {
 		return
 	}
-	r.def = def
-	// construct workflow
-	// launch workflow
+	c <- def
 }
 
 func (r *runner) SetLogin(login *sharefile.Login) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.login != nil {
+	c := r.loginWait
+	if c == nil {
 		return
 	}
-	r.login = login
-	// signal login set?
-	// pass on channel instead of set?
+	c <- login
 }
 
 func (r *runner) setNext(url string, err error) {
@@ -121,4 +126,8 @@ func (r *runner) setNext(url string, err error) {
 func (r *runner) Name() string {
 	time := time.Now().Format("2006-01-02 15:04:05")
 	return r.cmd.Channel.Name + " " + time
+}
+
+func (r *runner) Authenticate() *sharefile.Login {
+	return r.login
 }

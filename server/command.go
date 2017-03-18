@@ -25,20 +25,13 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	_, msg := srv.new(cmd, publicHost(req))
 	wr.Header().Add("Content-Type", "application/json")
-
-	wf := srv.new(cmd)
-
-	def, ok := wfTypes[cmd.Text]
-	if !ok {
-		url := commandClickURL(publicHost(req), wf.wfID)
-		_, err = helpMessage(url).WriteTo(wr)
-		// log err
+	_, err = msg.WriteTo(wr)
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	wf.SetDefinition(def)
-
-	panic("wf auth msg")
 }
 
 func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http.Request) {

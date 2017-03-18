@@ -19,20 +19,20 @@ const (
 	wfTypeQueryKey = "wftype"
 )
 
-func commandClickURL(host string, wfID int) string {
-	return wfURL(host, commandClickPath, wfID)
+type callbackURLs struct {
+	CommandClick string
+	AuthCallback string
+	EventWebhook string
+	Waiting      string
 }
 
-func authCallbackURL(host string, wfID int) string {
-	return wfURL(host, authPath, wfID)
-}
-
-func eventCallbackURL(host string, wfID int) string {
-	return wfURL(host, eventPath, wfID)
-}
-
-func waitURL(host string, wfID int) string {
-	return wfURL(host, redirectPath, wfID)
+func (s *server) callbackURLs(host string, wfID int) callbackURLs {
+	return callbackURLs{
+		CommandClick: wfURL(host, commandClickPath, wfID),
+		AuthCallback: wfURL(host, authPath, wfID),
+		EventWebhook: wfURL(host, eventPath, wfID),
+		Waiting:      wfURL(host, redirectPath, wfID),
+	}
 }
 
 func wfURL(host, path string, wfID int) string {

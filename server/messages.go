@@ -23,3 +23,9 @@ func helpMessage(wfClickURL string) slack.Message {
 		Text: strings.Join(links, " | "),
 	}
 }
+
+func errorMessage(err error) slack.Message {
+	return slack.Message{
+		Text: fmt.Sprintf("Oops, something went wrong: %v", err.Error()),
+	}
+}
