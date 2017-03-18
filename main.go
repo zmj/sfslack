@@ -16,9 +16,13 @@ func main() {
 	flag.Parse()
 
 	srv, err := server.NewServer(cfg)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	err = srv.ListenAndServe()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 		return
 	}
 }

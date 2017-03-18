@@ -17,8 +17,6 @@ import (
 
 const (
 	publicHostHeader = "X-PUBLIC-HOST"
-	wfidQueryKey     = "wfid"
-	wfTypeQueryKey   = "wftype"
 )
 
 type server struct {
