@@ -39,7 +39,8 @@ func NewServer(cfg Config) (*http.Server, error) {
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", landingPage)
+	mux.HandleFunc("/", printReq)
+	mux.HandleFunc(installPath, srv.install)
 	mux.HandleFunc(slackAuthPath, srv.slackAuth)
 	mux.HandleFunc(commandPath, srv.newCommand)
 	mux.HandleFunc(commandClickPath, srv.wfHandler(srv.newCommandClick))
@@ -80,11 +81,10 @@ func (srv *server) put(r *runner) {
 	srv.workflows[srv.wfID] = r
 }
 
-func landingPage(wr http.ResponseWriter, req *http.Request) {
+func printReq(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
-
-	wr.Write([]byte(buttonPageHTML))
+	http.Error(wr, "", http.StatusNotFound)
 }
 
 func (srv *server) logErr(err error) {
