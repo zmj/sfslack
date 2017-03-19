@@ -21,13 +21,13 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 	select {
 	case url = <-redir:
 		accept <- true
+		if url == "" {
+			wr.Write([]byte("Done! You may close this page."))
+			return
+		}
+		http.Redirect(wr, req, url, http.StatusFound)
 	case <-time.After(redirectTimeout):
 		accept <- false
+		http.Redirect(wr, req, wf.urls.Waiting, http.StatusFound)
 	}
-
-	if url == "" {
-		wr.Write([]byte("Done! You may close this page."))
-		return
-	}
-	http.Redirect(wr, req, url, http.StatusFound)
 }

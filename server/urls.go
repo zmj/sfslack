@@ -13,7 +13,7 @@ const (
 	commandClickPath = "/sfslack/command/click"
 	authPath         = "/sfslack/auth"
 	eventPath        = "/sfslack/event"
-	redirectPath     = "/sfslack/wait"
+	redirectPath     = "/sfslack/next"
 
 	wfidQueryKey   = "wfid"
 	wfTypeQueryKey = "wftype"
