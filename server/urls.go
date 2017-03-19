@@ -11,10 +11,10 @@ import (
 const (
 	commandPath      = "/sfslack/command"
 	commandClickPath = "/sfslack/command/click"
-	authPath         = "/sfslack/auth"
+	sfAuthPath       = "/sfslack/sfoauth"
 	eventPath        = "/sfslack/event"
 	redirectPath     = "/sfslack/next"
-	appAddPath       = "/sfslack/appadd"
+	slackAuthPath    = "/sfslack/slackoauth"
 
 	wfidQueryKey   = "wfid"
 	wfTypeQueryKey = "wftype"
@@ -30,7 +30,7 @@ type callbackURLs struct {
 func (s *server) callbackURLs(host string, wfID int) callbackURLs {
 	return callbackURLs{
 		CommandClick: wfURL(host, commandClickPath, wfID),
-		AuthCallback: wfURL(host, authPath, wfID),
+		AuthCallback: wfURL(host, sfAuthPath, wfID),
 		EventWebhook: wfURL(host, eventPath, wfID),
 		Waiting:      wfURL(host, redirectPath, wfID),
 	}

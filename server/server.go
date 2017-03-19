@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	publicHostHeader = "X-PUBLIC-HOST"
+	publicHostHeader = "X-SF-FORWARDED-HOST"
 )
 
 type server struct {
@@ -39,11 +39,11 @@ func NewServer(cfg Config) (*http.Server, error) {
 
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", printReq)
-	mux.HandleFunc(appAddPath, srv.appAdded)
+	mux.HandleFunc("/", landingPage)
+	mux.HandleFunc(slackAuthPath, srv.slackAuth)
 	mux.HandleFunc(commandPath, srv.newCommand)
 	mux.HandleFunc(commandClickPath, srv.wfHandler(srv.newCommandClick))
-	mux.HandleFunc(authPath, srv.wfHandler(srv.authCallback))
+	mux.HandleFunc(sfAuthPath, srv.wfHandler(srv.sfAuth))
 	mux.HandleFunc(eventPath, srv.wfHandler(srv.eventCallback))
 	mux.HandleFunc(redirectPath, srv.wfHandler(srv.redirect))
 	return mux
@@ -80,10 +80,11 @@ func (srv *server) put(r *runner) {
 	srv.workflows[srv.wfID] = r
 }
 
-func printReq(wr http.ResponseWriter, req *http.Request) {
+func landingPage(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
-	http.Error(wr, "", http.StatusNotFound)
+
+	wr.Write([]byte(buttonPageHTML))
 }
 
 func (srv *server) logErr(err error) {

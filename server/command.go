@@ -2,9 +2,6 @@ package server
 
 import (
 	"net/http"
-	"net/http/httputil"
-
-	"fmt"
 
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
@@ -16,9 +13,6 @@ var wfTypes = map[string]*workflow.Definition{
 }
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
-	bytes, _ := httputil.DumpRequest(req, true)
-	fmt.Println(string(bytes))
-
 	cmd, err := parseCommand(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
@@ -35,9 +29,6 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 }
 
 func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http.Request) {
-	bytes, _ := httputil.DumpRequest(req, true)
-	fmt.Println(string(bytes))
-
 	wfType := req.URL.Query().Get(wfTypeQueryKey)
 	def, ok := wfTypes[wfType]
 	if !ok {
