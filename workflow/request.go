@@ -16,3 +16,7 @@ func (wf *requestWorkflow) Setup() error {
 	fmt.Println("Request start!")
 	return nil
 }
+
+func (wf *requestWorkflow) Listen() {
+
+}

@@ -19,8 +19,6 @@ type runner struct {
 	loginWait chan url.Values
 	wf        workflow.Workflow
 	urls      callbackURLs
-	cmd       slack.Command
-	done      chan error
 }
 
 func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) {
@@ -42,6 +40,30 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 }
 
 func (r *runner) run() {
+	// need shutdown on these two waits
+	def := r.getDefinition()
+
+	login, err := r.getLogin()
+	if err != nil {
+		r.Reply(errorMessage(err))
+		r.srv.logErr(err)
+		return
+	}
+	r.login = login
+
+	r.wf = def.Constructor(r)
+	r.setWorking()
+	err = r.wf.Setup()
+	if err != nil {
+		r.Reply(errorMessage(err))
+		r.srv.logErr(err)
+		return
+	}
+
+	r.wf.Listen()
+}
+
+func (r *runner) getDefinition() *workflow.Definition {
 	def, ok := wfTypes[r.cmd.Text]
 	if !ok {
 		r.defWait = make(chan *workflow.Definition, 1)
@@ -49,31 +71,20 @@ func (r *runner) run() {
 		r.Reply(msg)
 		def = <-r.defWait
 	}
+	return def
+}
 
-	r.login, ok = r.srv.authCache.TryGet(r.cmd.User)
+func (r *runner) getLogin() (*sharefile.Login, error) {
+	login, ok := r.srv.authCache.TryGet(r.cmd.User)
 	if !ok {
 		r.loginWait = make(chan url.Values, 1)
 		msg := loginMessage(r.urls.AuthCallback)
 		r.RedirectOrReply(r.urls.AuthCallback, msg)
 		authValues := <-r.loginWait
 		r.setWorking()
-		login, err := r.srv.authCache.Add(r.cmd.User, authValues)
-		if err != nil {
-			r.Reply(errorMessage(err))
-			r.srv.logErr(err)
-			return
-		}
-		r.login = login
+		return r.srv.authCache.Add(r.cmd.User, authValues)
 	}
-
-	r.wf = def.Constructor(r)
-	r.setWorking()
-	err := r.wf.Setup()
-	if err != nil {
-		r.Reply(errorMessage(err))
-		r.srv.logErr(err)
-		return
-	}
+	return login, nil
 }
 
 func (r *runner) SetDefinition(def *workflow.Definition) {

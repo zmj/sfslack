@@ -7,9 +7,7 @@ import (
 
 type Workflow interface {
 	Setup() error
-	Done() <-chan struct{}
-	Err() error
-	Shutdown()
+	Listen()
 }
 
 type Host interface {

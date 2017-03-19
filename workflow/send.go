@@ -36,12 +36,16 @@ func (wf *sendWorkflow) Setup() error {
 	return nil
 }
 
+func (wf *sendWorkflow) Event() {
+
+}
+
+func (wf *sendWorkflow) Listen() {
+
+}
+
 func uploadMessage(uploadURL string) slack.Message {
 	return slack.Message{
 		Text: fmt.Sprintf("Upload your files: %v", uploadURL),
 	}
-}
-
-func (wf *sendWorkflow) Event() {
-
 }
