@@ -77,16 +77,13 @@ func (r *replier) sendMsg(msg slack.Message) {
 type redirectCb func(string) bool
 
 func (r *replier) NextRedirect(cb redirectCb) {
-	fmt.Println("next in")
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	fmt.Println(r.useCurrent)
 	if r.useCurrent {
-		fmt.Println(r.currentURL)
 		url := r.currentURL
 		go cb(url)
 	} else {
-		fmt.Println("append")
 		r.waiting = append(r.waiting, cb)
 	}
 }

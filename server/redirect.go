@@ -8,7 +8,6 @@ import (
 
 const (
 	redirectTimeout = 3 * time.Second
-	waitPageReload  = 5 * time.Second
 )
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
@@ -45,7 +44,7 @@ const (
 
 func waitHTML(nextURL string) string {
 	s := fmt.Sprintf(waitHTMLfmt,
-		waitPageReload/time.Second,
+		0,
 		nextURL,
 		waitMessage)
 	fmt.Println(s)
