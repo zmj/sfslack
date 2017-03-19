@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	installPath      = "/sfslack"
+	installPath      = "/sfslack/install"
 	commandPath      = "/sfslack/command"
 	commandClickPath = "/sfslack/command/click"
 	sfAuthPath       = "/sfslack/sfoauth"
