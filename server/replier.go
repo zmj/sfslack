@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/zmj/sfslack/slack"
@@ -79,7 +78,6 @@ type redirectCb func(string) bool
 func (r *replier) NextRedirect(cb redirectCb) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	fmt.Println(r.useCurrent)
 	if r.useCurrent {
 		url := r.currentURL
 		go cb(url)

@@ -3,8 +3,6 @@ package workflow
 import (
 	"fmt"
 
-	"time"
-
 	"github.com/zmj/sfslack/slack"
 )
 
@@ -31,7 +29,6 @@ func (wf *sendWorkflow) Setup() error {
 		return err // cancel sub - check done / shutdown called?
 	}
 	// wait for subscribe
-	<-time.After(10 * time.Second)
 	uploadURL := requestShare.URI
 	wf.RedirectOrReply(uploadURL, uploadMessage(uploadURL))
 

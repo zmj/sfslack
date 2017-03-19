@@ -47,6 +47,5 @@ func waitHTML(nextURL string) string {
 		0,
 		nextURL,
 		waitMessage)
-	fmt.Println(s)
 	return s
 }
