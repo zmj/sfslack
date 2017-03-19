@@ -40,6 +40,7 @@ func NewServer(cfg Config) (*http.Server, error) {
 func (srv *server) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", printReq)
+	mux.HandleFunc(appAddPath, srv.AppAdded)
 	mux.HandleFunc(commandPath, srv.newCommand)
 	mux.HandleFunc(commandClickPath, srv.wfHandler(srv.newCommandClick))
 	mux.HandleFunc(authPath, srv.wfHandler(srv.authCallback))

@@ -14,6 +14,7 @@ const (
 	authPath         = "/sfslack/auth"
 	eventPath        = "/sfslack/event"
 	redirectPath     = "/sfslack/next"
+	appAddPath       = "/sfslack/appadd"
 
 	wfidQueryKey   = "wfid"
 	wfTypeQueryKey = "wftype"
