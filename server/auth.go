@@ -10,11 +10,6 @@ func (srv *server) authCallback(wf *runner, wr http.ResponseWriter, req *http.Re
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 
-	login, err := srv.authCache.Add(wf.cmd.User, req.URL.Query())
-	if err != nil {
-		http.Error(wr, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	wf.SetLogin(login)
+	wf.SetLogin(req.URL.Query())
 	srv.redirect(wf, wr, req)
 }

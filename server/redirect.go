@@ -9,24 +9,20 @@ const (
 	redirectTimeout = 3 * time.Second
 )
 
-type redirect struct {
-	done chan struct{}
-	url  string
-	err  error
-}
-
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	var url string
-	redir := wf.NextRedirect()
+	redir := make(chan string, 1)
+	accept := make(chan bool, 1)
+	cb := func(url string) bool {
+		redir <- url
+		return <-accept
+	}
+	wf.NextRedirect(cb)
 	select {
-	case <-redir.done:
-		if redir.err != nil {
-			http.Error(wr, redir.err.Error(), http.StatusInternalServerError)
-			return
-		}
-		url = redir.url
+	case url = <-redir:
+		accept <- true
 	case <-time.After(redirectTimeout):
-		url = wf.urls.Waiting
+		accept <- false
 	}
 
 	if url == "" {
