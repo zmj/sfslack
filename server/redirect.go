@@ -12,7 +12,6 @@ const (
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
 	fmt.Println("redir in")
-	var url string
 	redir := make(chan string, 1)
 	accept := make(chan bool, 1)
 	cb := func(url string) bool {
@@ -20,8 +19,9 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		return <-accept
 	}
 	fmt.Println("redir pre")
-	wf.NextRedirect(cb)
+	go wf.NextRedirect(cb)
 	fmt.Println("redir mid")
+	var url string
 	select {
 	case url = <-redir:
 		accept <- true
