@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 )
 
-func (srv *server) AppAdded(wr http.ResponseWriter, req *http.Request) {
+func (srv *server) appAdded(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 }
