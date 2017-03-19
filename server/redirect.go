@@ -1,12 +1,14 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
 
 const (
 	redirectTimeout = 3 * time.Second
+	waitPageReload  = 5 * time.Second
 )
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
@@ -28,6 +30,24 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		http.Redirect(wr, req, url, http.StatusFound)
 	case <-time.After(redirectTimeout):
 		accept <- false
-		http.Redirect(wr, req, wf.urls.Waiting, http.StatusFound)
+		wr.Write([]byte(waitHTML(wf.urls.Waiting)))
 	}
+}
+
+const (
+	waitMessage = "Working on it..."
+	waitHTMLfmt = `<html><head>
+<meta http-equiv="refresh" content="%v; url=%v">
+</head><body>
+%v
+</body></html>`
+)
+
+func waitHTML(nextURL string) string {
+	s := fmt.Sprintf(waitHTMLfmt,
+		waitPageReload/time.Second,
+		nextURL,
+		waitMessage)
+	fmt.Println(s)
+	return s
 }
