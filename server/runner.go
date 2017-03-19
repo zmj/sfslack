@@ -12,13 +12,17 @@ import (
 
 type runner struct {
 	*replier
-	srv       *server
-	wfID      int
-	defWait   chan *workflow.Definition
-	login     *sharefile.Login
-	loginWait chan url.Values
-	wf        workflow.Workflow
-	urls      callbackURLs
+	srv  *server
+	wfID int
+	wf   workflow.Workflow
+	urls callbackURLs
+
+	def     *workflow.Definition
+	defWait chan struct{}
+
+	login       *sharefile.Login
+	loginValues url.Values
+	loginWait   chan struct{}
 }
 
 func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) {
@@ -53,7 +57,6 @@ func (r *runner) run() {
 	r.login = login
 
 	r.wf = def.Constructor(r)
-	r.setWorking()
 	err = r.wf.Setup()
 	if err != nil {
 		r.Reply(errorMessage(err))
@@ -67,10 +70,13 @@ func (r *runner) run() {
 func (r *runner) getDefinition() *workflow.Definition {
 	def, ok := wfTypes[r.cmd.Text]
 	if !ok {
-		r.defWait = make(chan *workflow.Definition, 1)
-		msg := helpMessage(r.urls.CommandClick)
-		r.Reply(msg)
-		def = <-r.defWait
+		r.mu.Lock()
+		r.defWait = make(chan struct{})
+		r.mu.Unlock()
+
+		r.Reply(helpMessage(r.urls.CommandClick))
+		<-r.defWait
+		def = r.def
 	}
 	return def
 }
@@ -78,31 +84,38 @@ func (r *runner) getDefinition() *workflow.Definition {
 func (r *runner) getLogin() (*sharefile.Login, error) {
 	login, ok := r.srv.authCache.TryGet(r.cmd.User)
 	if !ok {
-		r.loginWait = make(chan url.Values, 1)
+		r.mu.Lock()
+		r.loginWait = make(chan struct{})
+		r.mu.Unlock()
+
 		loginURL := r.srv.authCache.LoginURL(r.urls.AuthCallback)
-		msg := loginMessage(loginURL)
-		r.RedirectOrReply(loginURL, msg)
-		authValues := <-r.loginWait
-		r.setWorking()
-		return r.srv.authCache.Add(r.cmd.User, authValues)
+		r.RedirectOrReply(loginURL, loginMessage(loginURL))
+		<-r.loginWait
+		return r.srv.authCache.Add(r.cmd.User, r.loginValues)
 	}
 	return login, nil
 }
 
 func (r *runner) SetDefinition(def *workflow.Definition) {
-	c := r.defWait
-	if c == nil {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.def != nil {
 		return
 	}
-	c <- def
+	r.def = def
+	r.useCurrent = false
+	close(r.defWait)
 }
 
 func (r *runner) SetLogin(cbValues url.Values) {
-	c := r.loginWait
-	if c == nil {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.loginValues != nil {
 		return
 	}
-	c <- cbValues
+	r.loginValues = cbValues
+	r.useCurrent = false
+	close(r.loginWait)
 }
 
 func (r *runner) Name() string {

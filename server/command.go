@@ -44,6 +44,7 @@ func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http
 		http.Error(wr, "Unknown workflow type", http.StatusBadRequest)
 		return
 	}
+
 	wf.SetDefinition(def)
 	srv.redirect(wf, wr, req)
 }

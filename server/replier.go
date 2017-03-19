@@ -90,9 +90,3 @@ func (r *replier) NextRedirect(cb redirectCb) {
 		r.waiting = append(r.waiting, cb)
 	}
 }
-
-func (r *replier) setWorking() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.useCurrent = false
-}
