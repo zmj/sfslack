@@ -1,9 +1,9 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
-"fmt"
 )
 
 const (

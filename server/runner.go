@@ -79,8 +79,6 @@ func (r *runner) getLogin() (*sharefile.Login, error) {
 	login, ok := r.srv.authCache.TryGet(r.cmd.User)
 	if !ok {
 		r.loginWait = make(chan url.Values, 1)
-		
-
 		loginURL := r.srv.authCache.LoginURL(r.urls.AuthCallback)
 		msg := loginMessage(loginURL)
 		r.RedirectOrReply(loginURL, msg)
