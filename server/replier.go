@@ -19,15 +19,11 @@ type replier struct {
 }
 
 func (r *replier) Reply(msg slack.Message) {
-	r.replies <- reply{msg, "", nil}
+	r.replies <- reply{msg, ""}
 }
 
 func (r *replier) RedirectOrReply(url string, msg slack.Message) {
-	r.replies <- reply{msg, url, nil}
-}
-
-func (r *replier) ReplyErr(err error) {
-	r.replies <- reply{errorMessage(err), "", err}
+	r.replies <- reply{msg, url}
 }
 
 func (r *replier) sendReplies() {
@@ -43,7 +39,6 @@ func (r *replier) sendReplies() {
 type reply struct {
 	msg slack.Message
 	url string
-	err error
 }
 
 func (r *replier) replyInner(re reply) {

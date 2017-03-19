@@ -37,6 +37,7 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 	srv.put(r)
 	r.urls = srv.callbackURLs(host, r.wfID)
 	go r.run()
+	go r.sendReplies()
 	return r, <-first
 }
 
@@ -45,7 +46,7 @@ func (r *runner) run() {
 	if !ok {
 		r.defWait = make(chan *workflow.Definition, 1)
 		msg := helpMessage(r.urls.CommandClick)
-		r.sendMsg(msg)
+		r.Reply(msg)
 		def = <-r.defWait
 	}
 
@@ -58,7 +59,7 @@ func (r *runner) run() {
 		r.setWorking()
 		login, err := r.srv.authCache.Add(r.cmd.User, authValues)
 		if err != nil {
-			r.sendMsg(errorMessage(err))
+			r.Reply(errorMessage(err))
 			r.srv.logErr(err)
 			return
 		}
@@ -69,13 +70,10 @@ func (r *runner) run() {
 	r.setWorking()
 	err := r.wf.Setup()
 	if err != nil {
-		r.sendMsg(errorMessage(err))
+		r.Reply(errorMessage(err))
 		r.srv.logErr(err)
 		return
 	}
-
-	r.sendReplies()
-	r.wf.Shutdown()
 }
 
 func (r *runner) SetDefinition(def *workflow.Definition) {
