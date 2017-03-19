@@ -30,6 +30,7 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 			cmd:        cmd,
 			replies:    make(chan reply),
 		},
+		srv: srv,
 		// done?
 	}
 	srv.put(r)
@@ -78,8 +79,11 @@ func (r *runner) getLogin() (*sharefile.Login, error) {
 	login, ok := r.srv.authCache.TryGet(r.cmd.User)
 	if !ok {
 		r.loginWait = make(chan url.Values, 1)
-		msg := loginMessage(r.urls.AuthCallback)
-		r.RedirectOrReply(r.urls.AuthCallback, msg)
+		
+
+		loginURL := r.srv.authCache.LoginURL(r.urls.AuthCallback)
+		msg := loginMessage(loginURL)
+		r.RedirectOrReply(loginURL, msg)
 		authValues := <-r.loginWait
 		r.setWorking()
 		return r.srv.authCache.Add(r.cmd.User, authValues)

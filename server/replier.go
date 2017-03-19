@@ -51,7 +51,7 @@ func (r *replier) replyInner(re reply) {
 
 	var accepted bool
 	for _, cb := range cbs {
-		accepted = accepted || cb(re.url)
+		accepted = cb(re.url) || accepted
 	}
 	if !accepted {
 		r.sendMsg(re.msg)
@@ -77,12 +77,12 @@ type redirectCb func(string) bool
 
 func (r *replier) NextRedirect(cb redirectCb) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.useCurrent {
-		cb(r.currentURL)
-		return
-	}
-	r.waiting = append(r.waiting, cb)
+	if !r.useCurrent {
+		r.waiting = append(r.waiting, cb)
+}
+	url := r.currentURL
+	r.mu.Unlock()
+	cb(url)
 }
 
 func (r *replier) setWorking() {

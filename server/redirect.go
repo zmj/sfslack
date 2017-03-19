@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"time"
+"fmt"
 )
 
 const (
@@ -10,6 +11,7 @@ const (
 )
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
+	fmt.Println("redir in")
 	var url string
 	redir := make(chan string, 1)
 	accept := make(chan bool, 1)
@@ -17,13 +19,16 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		redir <- url
 		return <-accept
 	}
+	fmt.Println("redir pre")
 	wf.NextRedirect(cb)
+	fmt.Println("redir mid")
 	select {
 	case url = <-redir:
 		accept <- true
 	case <-time.After(redirectTimeout):
 		accept <- false
 	}
+	fmt.Println("redir post")
 
 	if url == "" {
 		wr.Write([]byte("Done! You may close this page."))
