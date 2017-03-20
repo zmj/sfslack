@@ -130,3 +130,7 @@ func (r *runner) User() string {
 func (r *runner) Authenticate() *sharefile.Login {
 	return r.login
 }
+
+func (r *runner) EventCallbackURL() string {
+	return r.urls.EventWebhook
+}

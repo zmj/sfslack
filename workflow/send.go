@@ -22,7 +22,14 @@ func (wf *sendWorkflow) Setup() error {
 		wf.fatal(err)
 		return err
 	}
+
 	// go subscribe
+	err = wf.subscribe(folder)
+	if err != nil {
+		wf.fatal(err)
+		return err
+	}
+
 	requestShare, err := wf.sf.CreateRequestShare(folder.ID)
 	if err != nil {
 		wf.fatal(err)

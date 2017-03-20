@@ -5,6 +5,8 @@ import "net/http/httputil"
 import "fmt"
 
 func (srv *server) eventCallback(wf *runner, wr http.ResponseWriter, req *http.Request) {
+	fmt.Println("")
+	fmt.Println("event!")
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 
