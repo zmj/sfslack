@@ -54,7 +54,7 @@ func (srv *server) parseCommand(req *http.Request) (slack.Command, error) {
 	if cmd.Command != slashCommand {
 		return slack.Command{}, fmt.Errorf("Unexpected command %v", cmd.Command)
 	}
-	if cmd.Token != srv.config.SlackToken {
+	if cmd.Token != srv.config.SlackVerificationToken {
 		return slack.Command{}, fmt.Errorf("Unexpected token %v", cmd.Token)
 	}
 

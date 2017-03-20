@@ -11,8 +11,9 @@ import (
 func main() {
 	cfg := server.Config{}
 	flag.IntVar(&cfg.Port, "port", 8080, "Listen Port")
-	flag.StringVar(&cfg.SfOAuthID, "oauthid", "", "OAuth Client ID")
-	flag.StringVar(&cfg.SfOAuthSecret, "oauthsecret", "", "OAuth Client Secret")
+	flag.StringVar(&cfg.SfOAuthID, "sfoauthid", "", "ShareFile OAuth Client ID")
+	flag.StringVar(&cfg.SfOAuthSecret, "sfoauthsecret", "", "ShareFile OAuth Client Secret")
+	flag.StringVar(&cfg.SlackVerificationToken, "slackverifytoken", "", "Slack command verification token")
 	flag.Parse()
 
 	srv, err := server.NewServer(cfg)

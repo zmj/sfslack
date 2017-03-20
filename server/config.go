@@ -5,11 +5,10 @@ import (
 )
 
 type Config struct {
-	Port          int
-	SfOAuthID     string
-	SfOAuthSecret string
-	// slack api key?
-	SlackToken string
+	Port                   int
+	SfOAuthID              string
+	SfOAuthSecret          string
+	SlackVerificationToken string
 }
 
 func (cfg *Config) validate() error {
