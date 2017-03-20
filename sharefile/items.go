@@ -1,7 +1,6 @@
 package sharefile
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -23,38 +22,9 @@ func (item Item) Folder() (Folder, error) {
 
 func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
 	toCreate := Folder{Name: name}
-
-	toSend, err := json.Marshal(toCreate)
-	if err != nil {
-		return Folder{}, err
-	}
-
-	req, err := http.NewRequest("POST",
-		sf.itemURL("Items", parentFolderId)+"/Folder",
-		bytes.NewReader(toSend))
-	if err != nil {
-		return Folder{}, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	hc := &http.Client{}
-	hc, req = sf.withCredentials(hc, req)
-
-	resp, err := hc.Do(req)
-	if err != nil {
-		return Folder{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return Folder{}, errors.New(resp.Status)
-	}
-
-	created := Folder{}
-	err = json.NewDecoder(resp.Body).Decode(&created)
-	if err != nil {
-		return Folder{}, err
-	}
-
-	return created, nil
+	url := sf.itemURL("Items", parentFolderId) + "/Folder"
+	result := Folder{}
+	return result, sf.doPost(url, toCreate, &result)
 }
 
 func (sf Login) GetChildren(parentFolderId string) ([]Item, error) {

@@ -7,13 +7,14 @@ import (
 
 type Workflow interface {
 	Setup() error
-	Listen()
+	Listen() error
 }
 
 type Host interface {
 	Authenticate() *sharefile.Login
-	Reply(slack.Message)
-	RedirectOrReply(string, slack.Message)
+	Reply(slack.Message) bool
+	RedirectOrReply(string, slack.Message) bool
+	ReplyErr(error) bool
 	Name() string
 	User() string
 	EventCallbackURL() string

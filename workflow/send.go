@@ -17,22 +17,25 @@ func newSend(host Host) Workflow {
 }
 
 func (wf *sendWorkflow) Setup() error {
+	if wf.err != nil {
+		return wf.err
+	}
 	folder, err := wf.createWorkflowFolder()
 	if err != nil {
-		wf.fatal(err)
+		wf.err = err
 		return err
 	}
 
 	// go subscribe
 	err = wf.subscribe(folder)
 	if err != nil {
-		wf.fatal(err)
+		wf.err = err
 		return err
 	}
 
 	requestShare, err := wf.sf.CreateRequestShare(folder.ID)
 	if err != nil {
-		wf.fatal(err)
+		wf.err = err
 		return err // cancel sub - check done / shutdown called?
 	}
 	// wait for subscribe
@@ -46,8 +49,11 @@ func (wf *sendWorkflow) Event() {
 
 }
 
-func (wf *sendWorkflow) Listen() {
-
+func (wf *sendWorkflow) Listen() error {
+	if wf.Err != nil {
+		return wf.err
+	}
+	return nil
 }
 
 func uploadMessage(uploadURL string) slack.Message {

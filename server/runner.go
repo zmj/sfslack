@@ -33,9 +33,9 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 			firstReply: first,
 			cmd:        cmd,
 			replies:    make(chan reply),
+			done:       make(chan struct{}),
 		},
 		srv: srv,
-		// done?
 	}
 	srv.put(r)
 	r.urls = srv.callbackURLs(host, r.wfID)
@@ -46,6 +46,7 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 
 func (r *runner) run() {
 	// need shutdown on these two waits
+	// what's the case for external shtudown?
 	r.def = r.getDefinition()
 
 	login, err := r.getLogin()
@@ -64,7 +65,14 @@ func (r *runner) run() {
 		return
 	}
 
-	r.wf.Listen()
+	err = r.wf.Listen()
+	if err != nil {
+		r.ReplyErr(err)
+		r.srv.logErr(err)
+		return
+	}
+	// need defer cleanup?
+
 }
 
 func (r *runner) getDefinition() *workflow.Definition {

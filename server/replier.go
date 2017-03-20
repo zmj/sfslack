@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/zmj/sfslack/slack"
+	"github.com/zmj/sfslack/workflow"
 )
 
 type replier struct {
@@ -14,36 +15,50 @@ type replier struct {
 	firstReply  chan slack.Message
 	repliesSent int
 	cmd         slack.Command
+	wf          workflow.Workflow
 
+	done    chan struct{}
 	replies chan reply
 }
 
-func (r *replier) Reply(msg slack.Message) {
-	r.replies <- reply{msg, "", nil}
+func (r *replier) Reply(msg slack.Message) bool {
+	c := make(chan bool, 1)
+	r.replies <- reply{msg, "", nil, c}
+	return <-c
 }
 
-func (r *replier) RedirectOrReply(url string, msg slack.Message) {
-	r.replies <- reply{msg, url, nil}
+func (r *replier) RedirectOrReply(url string, msg slack.Message) bool {
+	c := make(chan bool, 1)
+	r.replies <- reply{msg, url, nil, c}
+	return <-c
 }
 
-func (r *replier) ReplyErr(err error) {
-	r.replies <- reply{errorMessage(err), "", err}
+func (r *replier) ReplyErr(err error) bool {
+	c := make(chan bool, 1)
+	r.replies <- reply{errorMessage(err), "", err, c}
+	return <-c
 }
 
 func (r *replier) sendReplies() {
+	defer func() {
+		nope := <-r.replies
+		nope.accepted <- false
+	}()
 	for r.repliesSent < slack.MaxDelayedReplies {
 		select {
 		case re := <-r.replies:
 			r.replyInner(re)
-			// done
+		case <-r.done:
+			return
 		}
 	}
 }
 
 type reply struct {
-	msg slack.Message
-	url string
-	err error
+	msg      slack.Message
+	url      string
+	err      error
+	accepted chan bool
 }
 
 func (r *replier) replyInner(re reply) {

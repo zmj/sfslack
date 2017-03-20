@@ -26,7 +26,7 @@ type SubscribedResourceEvent struct {
 
 func (sf *Login) CreateSubscription(toCreate WebhookSubscription) (WebhookSubscription, error) {
 	result := WebhookSubscription{}
-	err := sf.doPost(sf.entityURL("WebhookSubscriptions"), &toCreate, &result)
+	err := sf.doPost(sf.entityURL("WebhookSubscriptions"), toCreate, &result)
 	return result, err
 }
 
