@@ -30,7 +30,7 @@ func (wf *requestWorkflow) Setup() error {
 	}
 	// wait for subscribe
 	uploadURL := requestShare.URI
-	wf.RedirectOrReply(uploadURL, wf.requestMessage(uploadURL))
+	wf.Reply(wf.requestMessage(uploadURL))
 
 	return nil
 }
@@ -41,7 +41,7 @@ func (wf *requestWorkflow) Listen() {
 
 func (wf *requestWorkflow) requestMessage(uploadURL string) slack.Message {
 	return slack.Message{
-		ResponseType: "in_channel",
+		ResponseType: slack.ResponseTypeInChannel,
 		Text:         fmt.Sprintf("%v has requested files", wf.Host.User()),
 	}
 }

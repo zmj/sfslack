@@ -9,6 +9,11 @@ import (
 	"net/http"
 )
 
+const (
+	ResponseTypeEphemeral = "ephemeral"
+	ResponseTypeInChannel = "in_channel"
+)
+
 type Message struct {
 	Text         string       `json:"text"`
 	ResponseType string       `json:"response_type,omitempty"`
