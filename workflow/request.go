@@ -42,6 +42,8 @@ func (wf *requestWorkflow) Listen() {
 func (wf *requestWorkflow) requestMessage(uploadURL string) slack.Message {
 	return slack.Message{
 		ResponseType: slack.ResponseTypeInChannel,
-		Text:         fmt.Sprintf("%v has requested files", wf.Host.User()),
+		Text: fmt.Sprintf("%v has requested files: %v",
+			wf.Host.User(),
+			uploadURL),
 	}
 }

@@ -53,7 +53,7 @@ func (r *replier) replyInner(re reply) {
 	for _, cb := range cbs {
 		accepted = cb(re.url) || accepted
 	}
-	if !accepted {
+	if re.url == "" || !accepted {
 		r.sendMsg(re.msg)
 	}
 }
