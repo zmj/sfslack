@@ -4,17 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 )
 
-func (sf *Login) doPost(entity string, body, response interface{}) error {
-	toSend, err := json.Marshal(body)
-	if err != nil {
-		return err
+func (sf *Login) doPost(url string, send, recv interface{}) error {
+	var body io.Reader
+	if send != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest("POST",
-		sf.entityURL(entity),
-		bytes.NewReader(toSend))
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return err
 	}
@@ -31,9 +34,11 @@ func (sf *Login) doPost(entity string, body, response interface{}) error {
 		return errors.New(resp.Status)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		return err
+	if recv != nil {
+		err = json.NewDecoder(resp.Body).Decode(recv)
+		if err != nil {
+			return err
+		}
 	}
 	// need this for building urls?
 	// created.Account = sf.Account

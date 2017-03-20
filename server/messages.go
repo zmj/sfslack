@@ -26,6 +26,10 @@ func helpMessage(wfClickURL string) slack.Message {
 
 func errorMessage(err error) slack.Message {
 	return slack.Message{
-		Text: fmt.Sprintf("Oops, something went wrong: %v", err.Error()),
+		Text: errorText(err),
 	}
+}
+
+func errorText(err error) string {
+	return fmt.Sprintf("Oops, something went wrong: %v", err.Error())
 }

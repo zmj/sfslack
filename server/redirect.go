@@ -11,22 +11,29 @@ const (
 )
 
 func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
-	redir := make(chan string, 1)
+	type redirect struct {
+		url string
+		err error
+	}
+	redir := make(chan redirect, 1)
 	accept := make(chan bool, 1)
-	cb := func(url string) bool {
-		redir <- url
+	cb := func(url string, err error) bool {
+		redir <- redirect{url, err}
 		return <-accept
 	}
 	wf.NextRedirect(cb)
-	var url string
 	select {
-	case url = <-redir:
+	case r := <-redir:
 		accept <- true
-		if url == "" {
+		if r.err != nil {
+			wr.Write([]byte(errorText(r.err)))
+			return
+		}
+		if r.url == "" {
 			wr.Write([]byte("Done! You may close this page."))
 			return
 		}
-		http.Redirect(wr, req, url, http.StatusFound)
+		http.Redirect(wr, req, r.url, http.StatusFound)
 	case <-time.After(redirectTimeout):
 		accept <- false
 		wr.Write([]byte(waitHTML(wf.urls.Waiting)))

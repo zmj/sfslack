@@ -10,7 +10,7 @@ type replier struct {
 	mu          *sync.Mutex
 	waiting     []redirectCb
 	useCurrent  bool
-	currentURL  string
+	current     reply
 	firstReply  chan slack.Message
 	repliesSent int
 	cmd         slack.Command
@@ -19,11 +19,15 @@ type replier struct {
 }
 
 func (r *replier) Reply(msg slack.Message) {
-	r.replies <- reply{msg, ""}
+	r.replies <- reply{msg, "", nil}
 }
 
 func (r *replier) RedirectOrReply(url string, msg slack.Message) {
-	r.replies <- reply{msg, url}
+	r.replies <- reply{msg, url, nil}
+}
+
+func (r *replier) ReplyErr(err error) {
+	r.replies <- reply{errorMessage(err), "", err}
 }
 
 func (r *replier) sendReplies() {
@@ -39,19 +43,20 @@ func (r *replier) sendReplies() {
 type reply struct {
 	msg slack.Message
 	url string
+	err error
 }
 
 func (r *replier) replyInner(re reply) {
 	r.mu.Lock()
 	cbs := r.waiting
 	r.waiting = nil
-	r.currentURL = re.url
+	r.current = re
 	r.useCurrent = true
 	r.mu.Unlock()
 
 	var accepted bool
 	for _, cb := range cbs {
-		accepted = cb(re.url) || accepted
+		accepted = cb(re.url, re.err) || accepted
 	}
 	if re.url == "" || !accepted {
 		r.sendMsg(re.msg)
@@ -73,14 +78,13 @@ func (r *replier) sendMsg(msg slack.Message) {
 	r.repliesSent++
 }
 
-type redirectCb func(string) bool
+type redirectCb func(string, error) bool
 
 func (r *replier) NextRedirect(cb redirectCb) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.useCurrent {
-		url := r.currentURL
-		go cb(url)
+		go cb(r.current.url, r.current.err)
 	} else {
 		r.waiting = append(r.waiting, cb)
 	}
