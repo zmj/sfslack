@@ -12,9 +12,11 @@ import (
 
 const (
 	publicHostHeader = "X-SF-FORWARDED-HOST"
+	slashCommand     = "/sharefile"
 )
 
 type server struct {
+	config    Config
 	authCache *sharefile.AuthCache
 	workflows map[int]*runner
 	mu        *sync.Mutex
@@ -27,7 +29,8 @@ func NewServer(cfg Config) (*http.Server, error) {
 		return nil, err
 	}
 	srv := &server{
-		authCache: sharefile.NewAuthCache(cfg.OAuthID, cfg.OAuthSecret),
+		config:    cfg,
+		authCache: sharefile.NewAuthCache(cfg.SfOAuthID, cfg.SfOAuthSecret),
 		workflows: make(map[int]*runner),
 		mu:        &sync.Mutex{},
 	}

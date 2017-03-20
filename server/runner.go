@@ -123,6 +123,10 @@ func (r *runner) Name() string {
 	return r.cmd.Channel.Name + " " + time
 }
 
+func (r *runner) User() string {
+	return r.cmd.User.Name
+}
+
 func (r *runner) Authenticate() *sharefile.Login {
 	return r.login
 }

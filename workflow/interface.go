@@ -15,6 +15,7 @@ type Host interface {
 	Reply(slack.Message)
 	RedirectOrReply(string, slack.Message)
 	Name() string
+	User() string
 }
 
 type Constructor func(Host) Workflow

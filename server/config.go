@@ -5,20 +5,21 @@ import (
 )
 
 type Config struct {
-	Port        int
-	OAuthID     string
-	OAuthSecret string
+	Port          int
+	SfOAuthID     string
+	SfOAuthSecret string
 	// slack api key?
+	SlackToken string
 }
 
 func (cfg *Config) validate() error {
 	if cfg.Port == 0 {
 		return fmt.Errorf("Missing port")
 	}
-	if cfg.OAuthID == "" {
+	if cfg.SfOAuthID == "" {
 		return fmt.Errorf("Missing oauth id")
 	}
-	if cfg.OAuthSecret == "" {
+	if cfg.SfOAuthSecret == "" {
 		return fmt.Errorf("Missing oauth secret")
 	}
 	return nil

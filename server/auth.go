@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"net/http/httputil"
 )
 
 func (srv *server) sfAuth(wf *runner, wr http.ResponseWriter, req *http.Request) {
@@ -12,8 +11,7 @@ func (srv *server) sfAuth(wf *runner, wr http.ResponseWriter, req *http.Request)
 }
 
 func (srv *server) slackAuth(wr http.ResponseWriter, req *http.Request) {
-	bytes, _ := httputil.DumpRequest(req, true)
-	fmt.Println(string(bytes))
+	fmt.Printf("slack auth code %v\n", req.URL.Query().Get("code"))
 
 	// swap for slack team + bot oauth tokens
 	// save forever?

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/zmj/sfslack/slack"
@@ -13,7 +14,7 @@ var wfTypes = map[string]*workflow.Definition{
 }
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
-	cmd, err := parseCommand(req)
+	cmd, err := srv.parseCommand(req)
 	if err != nil {
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
@@ -40,10 +41,22 @@ func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http
 	srv.redirect(wf, wr, req)
 }
 
-func parseCommand(req *http.Request) (slack.Command, error) {
+func (srv *server) parseCommand(req *http.Request) (slack.Command, error) {
 	values, err := httpValues(req)
 	if err != nil {
 		return slack.Command{}, err
 	}
-	return slack.ParseCommand(values)
+	cmd, err := slack.ParseCommand(values)
+	if err != nil {
+		return slack.Command{}, err
+	}
+
+	if cmd.Command != slashCommand {
+		return slack.Command{}, fmt.Errorf("Unexpected command %v", cmd.Command)
+	}
+	if cmd.Token != srv.config.SlackToken {
+		return slack.Command{}, fmt.Errorf("Unexpected token %v", cmd.Token)
+	}
+
+	return cmd, nil
 }

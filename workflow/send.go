@@ -32,7 +32,6 @@ func (wf *sendWorkflow) Setup() error {
 	uploadURL := requestShare.URI
 	wf.RedirectOrReply(uploadURL, uploadMessage(uploadURL))
 
-	// go event loop
 	return nil
 }
 
