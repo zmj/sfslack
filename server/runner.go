@@ -46,7 +46,7 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 
 func (r *runner) run() {
 	// need shutdown on these two waits
-	def := r.getDefinition()
+	r.def = r.getDefinition()
 
 	login, err := r.getLogin()
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *runner) run() {
 	}
 	r.login = login
 
-	r.wf = def.Constructor(r)
+	r.wf = r.def.Constructor(r)
 	err = r.wf.Setup()
 	if err != nil {
 		r.Reply(errorMessage(err))
