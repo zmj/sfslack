@@ -8,6 +8,7 @@ import (
 type Workflow interface {
 	Setup() error
 	Listen() error
+	Cleanup() error
 }
 
 type Host interface {

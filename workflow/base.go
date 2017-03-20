@@ -25,21 +25,6 @@ func (wf *wfBase) Err() error {
 	return wf.err
 }
 
-func (wf *wfBase) subscribe(folder sharefile.Folder) error {
-	toCreate := sharefile.WebhookSubscription{
-		SubscriptionContext: sharefile.SubscriptionContext{
-			ResourceType: sharefile.ResourceTypeFolder,
-			ResourceId:   folder.ID,
-		},
-		Events: []sharefile.SubscribedResourceEvent{
-			sharefile.SubscribedResourceEvent{
-				ResourceType:  sharefile.ResourceTypeFile,
-				OperationName: sharefile.OperationNameUpload,
-			},
-		},
-		WebhookURL: wf.Host.EventCallbackURL(),
-	}
-	// save sub on base for cleanup
-	_, err := wf.sf.CreateSubscription(toCreate)
-	return err
+func (wf *wfBase) Cleanup() error {
+	return nil
 }

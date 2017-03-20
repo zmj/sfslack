@@ -45,6 +45,13 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 }
 
 func (r *runner) run() {
+	defer func() {
+		if r.wf != nil {
+			err := r.wf.Cleanup()
+			r.srv.logErr(err)
+		}
+		close(r.done)
+	}()
 	// need shutdown on these two waits
 	// what's the case for external shtudown?
 	r.def = r.getDefinition()
@@ -71,8 +78,6 @@ func (r *runner) run() {
 		r.srv.logErr(err)
 		return
 	}
-	// need defer cleanup?
-
 }
 
 func (r *runner) getDefinition() *workflow.Definition {
