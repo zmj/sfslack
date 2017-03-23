@@ -58,7 +58,7 @@ func (r *runner) run() {
 
 	login, err := r.getLogin()
 	if err != nil {
-		r.Reply(errorMessage(err))
+		r.ReplyErr(err)
 		r.srv.logErr(err)
 		return
 	}
@@ -67,7 +67,7 @@ func (r *runner) run() {
 	r.wf = r.def.Constructor(r)
 	err = r.wf.Setup()
 	if err != nil {
-		r.Reply(errorMessage(err))
+		r.ReplyErr(err)
 		r.srv.logErr(err)
 		return
 	}
