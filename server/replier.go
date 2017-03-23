@@ -47,6 +47,7 @@ func (r *replier) sendReplies() {
 	for r.repliesSent < slack.MaxDelayedReplies {
 		select {
 		case re := <-r.replies:
+re.accepted <- true
 			r.replyInner(re)
 		case <-r.done:
 			return
