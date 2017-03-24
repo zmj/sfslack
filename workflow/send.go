@@ -18,25 +18,25 @@ func newSend(host Host) Workflow {
 
 func (wf *sendWorkflow) Setup() error {
 	if wf.err != nil {
-		return wf.err
+		return fmt.Errorf("Workflow already error\n%v", wf.err)
 	}
 	folder, err := wf.createWorkflowFolder()
 	if err != nil {
-		wf.err = err
-		return err
+		wf.err = fmt.Errorf("Failed to create workflow folder\n%v", err)
+		return wf.err
 	}
 
 	// go subscribe
 	err = wf.subscribe(folder)
 	if err != nil {
-		wf.err = err
-		return err
+		wf.err = fmt.Errorf("Failed to subscribe to workflow folder\n%v", err)
+		return wf.err
 	}
 
 	requestShare, err := wf.sf.CreateRequestShare(folder.ID)
 	if err != nil {
-		wf.err = err
-		return err // cancel sub - check done / shutdown called?
+		wf.err = fmt.Errorf("Failed to create request share\n%v", err)
+		return wf.err // cancel sub - check done / shutdown called?
 	}
 	// wait for subscribe
 	uploadURL := requestShare.URI
@@ -51,7 +51,7 @@ func (wf *sendWorkflow) Event() {
 
 func (wf *sendWorkflow) Listen() error {
 	if wf.Err != nil {
-		return wf.err
+		return fmt.Errorf("Workflow already error\n%v", wf.err)
 	}
 	return nil
 }
