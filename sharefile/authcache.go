@@ -3,7 +3,6 @@ package sharefile
 import (
 	"fmt"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"sync"
 	"time"
@@ -47,12 +46,9 @@ func (ac *AuthCache) Add(key interface{}, oauthCode url.Values) (*Login, error) 
 	}
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	cj, _ := cookiejar.New(nil)
 	login := &Login{
 		oauthToken: token,
-		client: &http.Client{
-			Jar: cj,
-		},
+		client:     &http.Client{},
 	}
 	ac.userLogins[key] = login
 	go ac.refreshLoop(key)

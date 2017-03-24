@@ -29,9 +29,15 @@ func (sf *Login) doPost(url string, send, recv interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
-	// if err is auth error
-	// clear auth cookie
-	// try to get a new one from token
+	if resp.StatusCode == http.StatusUnauthorized {
+		sf.client.Jar = nil
+		req = sf.withCredentials(req)
+		resp, err = sf.client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
 	}

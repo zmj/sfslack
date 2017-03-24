@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"time"
@@ -35,6 +36,10 @@ type Login struct {
 }
 
 func (login Login) withCredentials(req *http.Request) *http.Request {
+	if login.client.Jar == nil {
+		jar, _ := cookiejar.New(nil)
+		login.client.Jar = jar
+	}
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.Subdomain, login.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
 	if len(cookies) == 0 {
