@@ -42,7 +42,7 @@ func (login Login) withCredentials(req *http.Request) *http.Request {
 	}
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.Subdomain, login.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
-	if len(cookies) == 0 {
+	if len(cookies) == 0 && len(req.Header.Get("Authorization")) == 0 {
 		req.Header.Add("Authorization", "Bearer "+login.oauthToken.AccessToken)
 	}
 	return req
