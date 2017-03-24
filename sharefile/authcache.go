@@ -6,6 +6,11 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"sync"
+	"time"
+)
+
+const (
+	tokenRefreshCheck = 30 * time.Minute
 )
 
 type AuthCache struct {
@@ -61,5 +66,27 @@ func (ac *AuthCache) LoginURL(callbackURL string) string {
 }
 
 func (ac *AuthCache) refreshLoop(key interface{}) {
-	// todo
+	t := time.NewTicker(tokenRefreshCheck)
+	defer t.Stop()
+	for expired := false; !expired; {
+		select {
+		case <-t.C:
+			login, _ := ac.TryGet(key)
+			if login.ExpiresAt.Before(time.Now()) {
+				expired = true
+				continue
+			}
+			if login.ExpiresAt.After(time.Now().Add(2 * time.Hour)) {
+				continue
+			}
+			token, err := login.refresh(ac.oauthID, ac.oauthSecret)
+			if err != nil {
+				continue
+			}
+			login.oauthToken = token
+		}
+	}
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	delete(ac.userLogins, key)
 }

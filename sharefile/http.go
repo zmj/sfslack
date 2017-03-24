@@ -29,6 +29,9 @@ func (sf *Login) doPost(url string, send, recv interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
+	// if err is auth error
+	// clear auth cookie
+	// try to get a new one from token
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
 	}
