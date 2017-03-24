@@ -40,8 +40,6 @@ func (sf *Login) doPost(url string, send, recv interface{}) error {
 			return err
 		}
 	}
-	// need this for building urls?
-	// created.Account = sf.Account
 
 	return nil
 }

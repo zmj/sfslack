@@ -3,13 +3,12 @@ package sharefile
 import "fmt"
 
 type Share struct {
-	Account   Account `json:"-"`
-	ID        string  `json:"Id,omitempty"`
-	URL       string  `json:"url,omitempty"`
-	ShareType string  `json:",omitempty"`
-	Parent    Folder  `json:",omitempty"`
-	Items     []File  `json:",omitempty"`
-	URI       string  `json:"Uri,omitempty"`
+	ID        string `json:"Id,omitempty"`
+	URL       string `json:"url,omitempty"`
+	ShareType string `json:",omitempty"`
+	Parent    Folder `json:",omitempty"`
+	Items     []File `json:",omitempty"`
+	URI       string `json:"Uri,omitempty"`
 }
 
 type Item struct {

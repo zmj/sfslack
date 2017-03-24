@@ -20,10 +20,10 @@ func (sf Login) CreateShare(toCreate Share) (Share, error) {
 	return result, err
 }
 
-func (sh Share) DownloadAllURL() string {
-	return sh.Account.itemURL("Shares", sh.ID) + "/Download"
+func (sf Account) DownloadAllURL(sh Share) string {
+	return sf.itemURL("Shares", sh.ID) + "/Download"
 }
 
-func (sh Share) DownloadURL(fileID string) string {
-	return sh.Account.itemURL("Shares", sh.ID) + "/Download(" + fileID + ")"
+func (sf Account) DownloadURL(sh Share, fileID string) string {
+	return sf.itemURL("Shares", sh.ID) + "/Download(" + fileID + ")"
 }
