@@ -11,7 +11,7 @@ import (
 func (sf *Login) doPost(url string, send, recv interface{}) error {
 	var body io.Reader
 	if send != nil {
-		b, err := json.Marshal(body)
+		b, err := json.Marshal(send)
 		if err != nil {
 			return err
 		}
