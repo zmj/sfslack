@@ -34,10 +34,9 @@ func (sf Login) GetChildren(parentFolderId string) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	hc := &http.Client{}
-	hc, req = sf.withCredentials(hc, req)
+	req = sf.withCredentials(req)
 
-	resp, err := hc.Do(req)
+	resp, err := sf.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -22,10 +22,9 @@ func (sf *Login) doPost(url string, send, recv interface{}) error {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
-	hc := &http.Client{}
-	hc, req = sf.withCredentials(hc, req)
+	req = sf.withCredentials(req)
 
-	resp, err := hc.Do(req)
+	resp, err := sf.client.Do(req)
 	if err != nil {
 		return err
 	}
