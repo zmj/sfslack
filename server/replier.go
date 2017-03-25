@@ -40,13 +40,13 @@ func (r *replier) ReplyErr(err error) bool {
 }
 
 func (r *replier) sendReplies() {
-	defer func() {
-		nope := <-r.replies
-		nope.accepted <- false
-	}()
-	for r.repliesSent < slack.MaxDelayedReplies {
+	for {
 		select {
 		case re := <-r.replies:
+			if r.repliesSent > slack.MaxDelayedReplies {
+				re.accepted <- false
+				continue
+			}
 			re.accepted <- true
 			r.replyInner(re)
 		case <-r.done:

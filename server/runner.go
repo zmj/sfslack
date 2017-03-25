@@ -47,41 +47,37 @@ func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) 
 }
 
 func (r *runner) run() {
+	var err error
 	defer func() {
-		if r.wf != nil {
-			err := r.wf.Cleanup()
-			err = fmt.Errorf("Error during cleanup\n%v", err)
+		if err != nil {
+			r.ReplyErr(err)
 			r.srv.logErr(err)
 		}
 		close(r.done)
 	}()
-	// need shutdown on these two waits
+	// need shutdown on these two waits?
 	// what's the case for external shtudown?
 	r.def = r.getDefinition()
-
 	login, err := r.getLogin()
 	if err != nil {
 		err = fmt.Errorf("Error during authentication\n%v", err)
-		r.ReplyErr(err)
-		r.srv.logErr(err)
 		return
 	}
 	r.login = login
-
 	r.wf = r.def.Constructor(r)
 	err = r.wf.Setup()
 	if err != nil {
 		err = fmt.Errorf("Error during setup\n%v", err)
-		r.ReplyErr(err)
-		r.srv.logErr(err)
 		return
 	}
-
 	err = r.wf.Listen()
 	if err != nil {
 		err = fmt.Errorf("Error during listen\n%v", err)
-		r.ReplyErr(err)
-		r.srv.logErr(err)
+		return
+	}
+	err = r.wf.Cleanup()
+	if err != nil {
+		err = fmt.Errorf("Error during cleanup\n%v", err)
 		return
 	}
 }
