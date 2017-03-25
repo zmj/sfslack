@@ -1,6 +1,10 @@
 package workflow
 
-import "github.com/zmj/sfslack/sharefile"
+import (
+	"context"
+
+	"github.com/zmj/sfslack/sharefile"
+)
 
 const (
 	slackFolderName = ".slack"
@@ -11,11 +15,11 @@ func (wf *wfBase) createWorkflowFolder() (sharefile.Folder, error) {
 	if err != nil {
 		return sharefile.Folder{}, err
 	}
-	return wf.sf.CreateFolder(wf.Name(), slackFolder.ID)
+	return wf.sf.CreateFolder(context.TODO(), wf.Name(), slackFolder.ID)
 }
 
 func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
-	children, err := sf.GetChildren("home")
+	children, err := sf.GetChildren(context.TODO(), "home")
 	if err != nil {
 		return sharefile.Folder{}, err
 	}
@@ -28,7 +32,7 @@ func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
 			return folder, nil
 		}
 	}
-	return sf.CreateFolder(slackFolderName, "home")
+	return sf.CreateFolder(context.TODO(), slackFolderName, "home")
 }
 
 func (wf *wfBase) subscribe(folder sharefile.Folder) error {
@@ -46,6 +50,6 @@ func (wf *wfBase) subscribe(folder sharefile.Folder) error {
 		WebhookURL: wf.Host.EventCallbackURL(),
 	}
 	// save sub on base for cleanup
-	_, err := wf.sf.CreateSubscription(toCreate)
+	_, err := wf.sf.CreateSubscription(context.TODO(), toCreate)
 	return err
 }

@@ -1,9 +1,8 @@
 package sharefile
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
-	"net/http"
 )
 
 func (item Item) File() (File, error) {
@@ -20,36 +19,16 @@ func (item Item) Folder() (Folder, error) {
 	return Folder{Item: item}, nil
 }
 
-func (sf Login) CreateFolder(name, parentFolderId string) (Folder, error) {
+func (sf Login) CreateFolder(ctx context.Context, name, parentFolderId string) (Folder, error) {
 	toCreate := Folder{Name: name}
 	url := sf.itemURL("Items", parentFolderId) + "/Folder"
 	result := Folder{}
-	return result, sf.doPost(url, toCreate, &result)
+	return result, sf.doPost(ctx, url, toCreate, &result)
 }
 
-func (sf Login) GetChildren(parentFolderId string) ([]Item, error) {
-	req, err := http.NewRequest("GET",
-		sf.itemURL("Items", parentFolderId)+"/Children",
-		nil)
-	if err != nil {
-		return nil, err
-	}
-	req = sf.withCredentials(req)
+func (sf Login) GetChildren(ctx context.Context, parentFolderId string) ([]Item, error) {
+	url := sf.itemURL("Items", parentFolderId) + "/Children"
 
-	resp, err := sf.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
-	}
-
-	items := Items{}
-	err = json.NewDecoder(resp.Body).Decode(&items)
-	if err != nil {
-		return nil, err
-	}
-
-	return items.Items, nil
+	result := Items{}
+	return result.Items, sf.doGet(ctx, url, &result)
 }

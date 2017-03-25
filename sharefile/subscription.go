@@ -1,5 +1,7 @@
 package sharefile
 
+import "context"
+
 const (
 	ResourceTypeFile    = "File"
 	ResourceTypeFolder  = "Folder"
@@ -24,13 +26,13 @@ type SubscribedResourceEvent struct {
 	OperationName string `json:",omitempty"`
 }
 
-func (sf *Login) CreateSubscription(toCreate WebhookSubscription) (WebhookSubscription, error) {
+func (sf *Login) CreateSubscription(ctx context.Context, toCreate WebhookSubscription) (WebhookSubscription, error) {
 	result := WebhookSubscription{}
-	err := sf.doPost(sf.entityURL("WebhookSubscriptions"), toCreate, &result)
+	err := sf.doPost(ctx, sf.entityURL("WebhookSubscriptions"), toCreate, &result)
 	return result, err
 }
 
-func (sf *Login) DeleteSubscription(id string) error {
+func (sf *Login) DeleteSubscription(ctx context.Context, id string) error {
 	url := sf.itemURL("WebhookSubscriptions", id)
-	return sf.doPost(url, nil, nil)
+	return sf.doPost(ctx, url, nil, nil)
 }

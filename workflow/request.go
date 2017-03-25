@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/zmj/sfslack/slack"
@@ -23,7 +24,7 @@ func (wf *requestWorkflow) Setup() error {
 		return err
 	}
 	// go subscribe
-	requestShare, err := wf.sf.CreateRequestShare(folder.ID)
+	requestShare, err := wf.sf.CreateRequestShare(context.TODO(), folder.ID)
 	if err != nil {
 		wf.err = err
 		return err // cancel sub - check done / shutdown called?
