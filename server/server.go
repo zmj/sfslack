@@ -26,7 +26,7 @@ type server struct {
 func NewServer(cfg Config) (*http.Server, error) {
 	err := cfg.validate()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Bad config: %v", err)
 	}
 	srv := &server{
 		config:    cfg,

@@ -5,6 +5,8 @@ import (
 
 	"net/url"
 
+	"fmt"
+
 	"github.com/zmj/sfslack/sharefile"
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
@@ -48,6 +50,7 @@ func (r *runner) run() {
 	defer func() {
 		if r.wf != nil {
 			err := r.wf.Cleanup()
+			err = fmt.Errorf("Error during cleanup\n%v", err)
 			r.srv.logErr(err)
 		}
 		close(r.done)
@@ -58,6 +61,7 @@ func (r *runner) run() {
 
 	login, err := r.getLogin()
 	if err != nil {
+		err = fmt.Errorf("Error during authentication\n%v", err)
 		r.ReplyErr(err)
 		r.srv.logErr(err)
 		return
@@ -67,6 +71,7 @@ func (r *runner) run() {
 	r.wf = r.def.Constructor(r)
 	err = r.wf.Setup()
 	if err != nil {
+		err = fmt.Errorf("Error during setup\n%v", err)
 		r.ReplyErr(err)
 		r.srv.logErr(err)
 		return
@@ -74,6 +79,7 @@ func (r *runner) run() {
 
 	err = r.wf.Listen()
 	if err != nil {
+		err = fmt.Errorf("Error during listen\n%v", err)
 		r.ReplyErr(err)
 		r.srv.logErr(err)
 		return
