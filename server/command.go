@@ -15,8 +15,8 @@ var wfTypes = map[string]*workflow.Definition{
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	cmd, err := srv.parseCommand(req)
-	err = fmt.Errorf("Command parse failed: %v", err)
 	if err != nil {
+		err = fmt.Errorf("Command parse failed: %v", err)
 		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -25,6 +25,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	wr.Header().Add("Content-Type", "application/json")
 	_, err = msg.WriteTo(wr)
 	if err != nil {
+		srv.logErr(err)
 		http.Error(wr, err.Error(), http.StatusInternalServerError)
 		return
 	}
