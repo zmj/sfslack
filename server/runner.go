@@ -16,7 +16,6 @@ type runner struct {
 	*replier
 	srv  *server
 	wfID int
-	wf   workflow.Workflow
 	urls callbackURLs
 
 	def     *workflow.Definition
@@ -64,18 +63,18 @@ func (r *runner) run() {
 		return
 	}
 	r.login = login
-	r.wf = r.def.Constructor(r)
-	err = r.wf.Setup()
+	wf := r.def.Constructor(r)
+	err = wf.Setup()
 	if err != nil {
 		err = fmt.Errorf("Error during setup\n%v", err)
 		return
 	}
-	err = r.wf.Listen()
+	err = wf.Listen()
 	if err != nil {
 		err = fmt.Errorf("Error during listen\n%v", err)
 		return
 	}
-	err = r.wf.Cleanup()
+	err = wf.Cleanup()
 	if err != nil {
 		err = fmt.Errorf("Error during cleanup\n%v", err)
 		return
