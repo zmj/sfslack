@@ -21,7 +21,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, msg := srv.new(cmd, publicHost(req))
+	_, msg := srv.new(cmd, srv.publicHost(req))
 	wr.Header().Add("Content-Type", "application/json")
 	_, err = msg.WriteTo(wr)
 	if err != nil {

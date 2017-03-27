@@ -75,8 +75,8 @@ func httpValues(req *http.Request) (url.Values, error) {
 	}
 }
 
-func publicHost(req *http.Request) string {
-	host := req.Header.Get(publicHostHeader)
+func (srv *server) publicHost(req *http.Request) string {
+	host := srv.config.Host
 	if host == "" {
 		host = req.URL.Host
 	}

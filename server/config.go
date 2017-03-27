@@ -5,6 +5,7 @@ import (
 )
 
 type Config struct {
+	Host                   string
 	Port                   int
 	SfOAuthID              string
 	SfOAuthSecret          string
@@ -12,6 +13,7 @@ type Config struct {
 }
 
 func (cfg *Config) validate() error {
+	// nothing for host - just use request host
 	if cfg.Port == 0 {
 		return fmt.Errorf("Missing port")
 	}

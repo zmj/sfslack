@@ -11,13 +11,12 @@ import (
 )
 
 const (
-	publicHostHeader = "X-SF-FORWARDED-HOST"
-	slashCommand     = "/sharefile"
+	slashCommand = "/sharefile"
 )
 
 type server struct {
 	config    Config
-	authSvc   *sfauth.Cache
+	authSvc   *sfauth.Cache // only used in wfsvc
 	workflows map[int]*runner
 	mu        *sync.Mutex
 	wfID      int
