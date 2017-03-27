@@ -7,7 +7,7 @@ import (
 
 	"sync"
 
-	"github.com/zmj/sfslack/sharefile"
+	"github.com/zmj/sfslack/sharefile/sfauth"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 
 type server struct {
 	config    Config
-	authCache *sharefile.AuthCache
+	authSvc   *sfauth.Cache
 	workflows map[int]*runner
 	mu        *sync.Mutex
 	wfID      int
@@ -30,7 +30,7 @@ func NewServer(cfg Config) (*http.Server, error) {
 	}
 	srv := &server{
 		config:    cfg,
-		authCache: sharefile.NewAuthCache(cfg.SfOAuthID, cfg.SfOAuthSecret),
+		authSvc:   sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret),
 		workflows: make(map[int]*runner),
 		mu:        &sync.Mutex{},
 	}

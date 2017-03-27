@@ -19,15 +19,15 @@ func (item Item) Folder() (Folder, error) {
 	return Folder{Item: item}, nil
 }
 
-func (sf Login) CreateFolder(ctx context.Context, name, parentFolderId string) (Folder, error) {
+func (sf *Login) CreateFolder(ctx context.Context, name, parentFolderId string) (Folder, error) {
 	toCreate := Folder{Name: name}
-	url := sf.itemURL("Items", parentFolderId) + "/Folder"
+	url := sf.Account().itemURL("Items", parentFolderId) + "/Folder"
 	result := Folder{}
 	return result, sf.doPost(ctx, url, toCreate, &result)
 }
 
-func (sf Login) GetChildren(ctx context.Context, parentFolderId string) ([]Item, error) {
-	url := sf.itemURL("Items", parentFolderId) + "/Children"
+func (sf *Login) GetChildren(ctx context.Context, parentFolderId string) ([]Item, error) {
+	url := sf.Account().itemURL("Items", parentFolderId) + "/Children"
 
 	result := Items{}
 	return result.Items, sf.doGet(ctx, url, &result)

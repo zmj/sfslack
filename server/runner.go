@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/zmj/sfslack/sharefile"
+
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
 )
@@ -96,18 +97,22 @@ func (r *runner) getDefinition() *workflow.Definition {
 }
 
 func (r *runner) getLogin() (*sharefile.Login, error) {
-	login, ok := r.srv.authCache.TryGet(r.cmd.User)
+	creds, ok := r.srv.authSvc.TryGet(r.cmd.User)
 	if !ok {
 		r.mu.Lock()
 		r.loginWait = make(chan struct{})
 		r.mu.Unlock()
 
-		loginURL := r.srv.authCache.LoginURL(r.urls.AuthCallback)
+		loginURL := r.srv.authSvc.LoginURL(r.urls.AuthCallback)
 		r.RedirectOrReply(loginURL, loginMessage(loginURL))
 		<-r.loginWait
-		return r.srv.authCache.Add(r.cmd.User, r.loginValues)
+		var err error
+		creds, err = r.srv.authSvc.Add(r.cmd.User, r.loginValues)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to add auth\n%v", err)
+		}
 	}
-	return login, nil
+	return &sharefile.Login{creds}, nil
 }
 
 func (r *runner) SetDefinition(def *workflow.Definition) {

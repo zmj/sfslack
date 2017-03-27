@@ -4,21 +4,22 @@ import "context"
 
 func (sf Login) CreateRequestShare(ctx context.Context, parentFolderId string) (Share, error) {
 	toCreate := Share{ShareType: "Request",
-		Parent: Folder{Item: Item{URL: sf.itemURL("Items", parentFolderId)}}}
+		Parent: Folder{Item: Item{URL: sf.Account().itemURL("Items", parentFolderId)}}}
 	return sf.CreateShare(ctx, toCreate)
 }
 
 func (sf Login) CreateSendShare(ctx context.Context, files []File) (Share, error) {
 	toCreate := Share{ShareType: "Send"}
 	for _, file := range files {
-		toCreate.Items = append(toCreate.Items, File{Item{URL: sf.itemURL("Items", file.ID)}})
+		file := File{Item{URL: sf.Account().itemURL("Items", file.ID)}}
+		toCreate.Items = append(toCreate.Items, file)
 	}
 	return sf.CreateShare(ctx, toCreate)
 }
 
 func (sf Login) CreateShare(ctx context.Context, toCreate Share) (Share, error) {
 	result := Share{}
-	err := sf.doPost(ctx, sf.entityURL("Shares"), toCreate, &result)
+	err := sf.doPost(ctx, sf.Account().entityURL("Shares"), toCreate, &result)
 	return result, err
 }
 

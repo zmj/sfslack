@@ -28,11 +28,11 @@ type SubscribedResourceEvent struct {
 
 func (sf *Login) CreateSubscription(ctx context.Context, toCreate WebhookSubscription) (WebhookSubscription, error) {
 	result := WebhookSubscription{}
-	err := sf.doPost(ctx, sf.entityURL("WebhookSubscriptions"), toCreate, &result)
+	err := sf.doPost(ctx, sf.Account().entityURL("WebhookSubscriptions"), toCreate, &result)
 	return result, err
 }
 
 func (sf *Login) DeleteSubscription(ctx context.Context, id string) error {
-	url := sf.itemURL("WebhookSubscriptions", id)
+	url := sf.Account().itemURL("WebhookSubscriptions", id)
 	return sf.doPost(ctx, url, nil, nil)
 }

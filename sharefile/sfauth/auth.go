@@ -1,4 +1,4 @@
-package sharefile
+package sfauth
 
 import (
 	"encoding/json"
@@ -9,53 +9,50 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/zmj/sfslack/sharefile"
 )
 
-type Account struct {
-	Subdomain       string `json:"subdomain,omitempty"`
-	AppControlPlane string `json:"appcp,omitempty"`
-	APIControlPlane string `json:"apicp,omitempty"`
-}
-
 type oauthToken struct {
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    int    `json:"expires_in,omitempty"`
-	Account
-	ExpiresAt time.Time `json:"-"`
+	accessToken  string            `json:"access_token,omitempty"`
+	refreshToken string            `json:"refresh_token,omitempty"`
+	expiresIn    int               `json:"expires_in,omitempty"`
+	account      sharefile.Account `json:"-"`
+	expiresAt    time.Time         `json:"-"`
 }
 
 type oauthCode struct {
-	Code string
-	Account
+	code    string
+	account sharefile.Account
 }
 
-type Login struct {
-	oauthToken
-	client *http.Client
+type login struct {
+	token   oauthToken
+	account sharefile.Account
+	client  *http.Client
 }
 
-func (login Login) withCredentials(req *http.Request) *http.Request {
+func (login login) withCredentials(req *http.Request) *http.Request {
 	if login.client.Jar == nil {
 		jar, _ := cookiejar.New(nil)
 		login.client.Jar = jar
 	}
-	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.Subdomain, login.APIControlPlane))
+	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.account.Subdomain, login.account.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
 	if len(cookies) == 0 && len(req.Header.Get("Authorization")) == 0 {
-		req.Header.Add("Authorization", "Bearer "+login.oauthToken.AccessToken)
+		req.Header.Add("Authorization", "Bearer "+login.token.accessToken)
 	}
 	return req
 }
 
 func parseOAuthCode(values url.Values) (oauthCode, error) {
 	code := oauthCode{
-		Account: Account{
+		account: sharefile.Account{
 			Subdomain:       values.Get("subdomain"),
 			AppControlPlane: values.Get("appcp"),
 			APIControlPlane: values.Get("apicp"),
 		},
-		Code: values.Get("code"),
+		code: values.Get("code"),
 	}
 	// validate
 	return code, nil
@@ -65,30 +62,30 @@ func (code oauthCode) getToken(oauthID, oauthSecret string) (oauthToken, error) 
 	values := map[string]string{
 		"client_id":     oauthID,
 		"client_secret": oauthSecret,
-		"code":          code.Code,
+		"code":          code.code,
 		"grant_type":    "authorization_code",
 	}
-	return code.tokenPost(values)
+	return tokenPost(code.account, values)
 }
 
 func (token oauthToken) refresh(oauthID, oauthSecret string) (oauthToken, error) {
 	values := map[string]string{
 		"client_id":     oauthID,
 		"client_secret": oauthSecret,
-		"refresh_token": token.RefreshToken,
+		"refresh_token": token.refreshToken,
 		"grant_type":    "refresh_token",
 	}
-	return token.tokenPost(values)
+	return tokenPost(token.account, values)
 }
 
-func (sf Account) tokenPost(values map[string]string) (oauthToken, error) {
+func tokenPost(acct sharefile.Account, values map[string]string) (oauthToken, error) {
 	var valuePairs []string
 	for k, v := range values {
 		valuePairs = append(valuePairs, fmt.Sprintf("%v=%v", k, v))
 	}
 	toSend := strings.Join(valuePairs, "&")
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("https://%v.%v/oauth/token?requirev3=true", sf.Subdomain, sf.AppControlPlane),
+		fmt.Sprintf("https://%v.%v/oauth/token?requirev3=true", acct.Subdomain, acct.AppControlPlane),
 		strings.NewReader(toSend))
 	if err != nil {
 		return oauthToken{}, err
@@ -115,7 +112,31 @@ func (sf Account) tokenPost(values map[string]string) (oauthToken, error) {
 }
 
 func (token oauthToken) withExpiresAt() oauthToken {
-	d := time.Duration(token.ExpiresIn) * time.Second
-	token.ExpiresAt = time.Now().Add(d)
+	d := time.Duration(token.expiresIn) * time.Second
+	token.expiresAt = time.Now().Add(d)
 	return token
+}
+
+func (sf *login) Account() sharefile.Account {
+	return sf.token.account
+}
+
+func (sf *login) Do(req *http.Request) (*http.Response, error) {
+	/*
+		req = login.WithCredentials(req)
+		resp, err := login.client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusUnauthorized {
+			login.client.Jar = nil
+			req = login.withCredentials(req)
+			resp, err = login.client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+		}*/
+	return sf.client.Do(req)
 }

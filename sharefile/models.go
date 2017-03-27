@@ -2,6 +2,12 @@ package sharefile
 
 import "fmt"
 
+type Account struct {
+	Subdomain       string `json:"subdomain,omitempty"`
+	AppControlPlane string `json:"appcp,omitempty"`
+	APIControlPlane string `json:"apicp,omitempty"`
+}
+
 type Share struct {
 	ID        string `json:"Id,omitempty"`
 	URL       string `json:"url,omitempty"`

@@ -9,7 +9,16 @@ import (
 	"net/http"
 )
 
-func (login *Login) doPost(ctx context.Context, url string, send, recv interface{}) error {
+type Login struct {
+	Credentials
+}
+
+type Credentials interface {
+	Account() Account
+	Do(*http.Request) (*http.Response, error)
+}
+
+func (login Login) doPost(ctx context.Context, url string, send, recv interface{}) error {
 	var body io.Reader
 	if send != nil {
 		b, err := json.Marshal(send)
@@ -35,21 +44,8 @@ func (login *Login) doGet(ctx context.Context, url string, recv interface{}) err
 }
 
 func (login *Login) do(ctx context.Context, req *http.Request, recv interface{}) error {
-	req = login.withCredentials(req)
-	resp, err := login.client.Do(req)
-	if err != nil {
-		return err
-	}
+	resp, err := login.Do(req)
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized {
-		login.client.Jar = nil
-		req = login.withCredentials(req)
-		resp, err = login.client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
 	}
