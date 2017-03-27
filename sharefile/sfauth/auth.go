@@ -32,14 +32,14 @@ type login struct {
 	client  *http.Client
 }
 
-func (login login) withCredentials(req *http.Request) *http.Request {
+func (login *login) withCredentials(req *http.Request) *http.Request {
 	if login.client.Jar == nil {
 		jar, _ := cookiejar.New(nil)
 		login.client.Jar = jar
 	}
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.account.Subdomain, login.account.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
-	if len(cookies) == 0 && len(req.Header.Get("Authorization")) == 0 {
+	if len(cookies) == 0 { // && len(req.Header.Get("Authorization")) == 0 {
 		req.Header.Add("Authorization", "Bearer "+login.token.accessToken)
 	}
 	return req
@@ -124,15 +124,6 @@ func (login *login) Account() sharefile.Account {
 
 func (login *login) Do(req *http.Request) (*http.Response, error) {
 	req = login.withCredentials(req)
-	resp, err := login.client.Do(req)
-	if err != nil {
-		return resp, err
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		resp.Body.Close()
-		login.client.Jar = nil
-		req = login.withCredentials(req)
-		resp, err = login.client.Do(req)
-	}
-	return resp, err
+	return login.client.Do(req)
+	// clear jar and reauth on unauthorized
 }
