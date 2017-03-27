@@ -14,9 +14,9 @@ import (
 )
 
 type oauthToken struct {
-	accessToken  string            `json:"access_token,omitempty"`
-	refreshToken string            `json:"refresh_token,omitempty"`
-	expiresIn    int               `json:"expires_in,omitempty"`
+	AccessToken  string            `json:"access_token,omitempty"`
+	RefreshToken string            `json:"refresh_token,omitempty"`
+	ExpiresIn    int               `json:"expires_in,omitempty"`
 	account      sharefile.Account `json:"-"`
 	expiresAt    time.Time         `json:"-"`
 }
@@ -40,7 +40,7 @@ func (login *login) withCredentials(req *http.Request) *http.Request {
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.account.Subdomain, login.account.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
 	if len(cookies) == 0 { // && len(req.Header.Get("Authorization")) == 0 {
-		req.Header.Add("Authorization", "Bearer "+login.token.accessToken)
+		req.Header.Add("Authorization", "Bearer "+login.token.AccessToken)
 	}
 	return req
 }
@@ -72,7 +72,7 @@ func (token oauthToken) refresh(oauthID, oauthSecret string) (oauthToken, error)
 	values := map[string]string{
 		"client_id":     oauthID,
 		"client_secret": oauthSecret,
-		"refresh_token": token.refreshToken,
+		"refresh_token": token.RefreshToken,
 		"grant_type":    "refresh_token",
 	}
 	return tokenPost(token.account, values)
@@ -113,7 +113,7 @@ func tokenPost(acct sharefile.Account, values map[string]string) (oauthToken, er
 }
 
 func (token oauthToken) withExpiresAt() oauthToken {
-	d := time.Duration(token.expiresIn) * time.Second
+	d := time.Duration(token.ExpiresIn) * time.Second
 	token.expiresAt = time.Now().Add(d)
 	return token
 }
