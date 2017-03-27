@@ -118,26 +118,21 @@ func (token oauthToken) withExpiresAt() oauthToken {
 	return token
 }
 
-func (sf *login) Account() sharefile.Account {
-	return sf.token.account
+func (login *login) Account() sharefile.Account {
+	return login.token.account
 }
 
-func (sf *login) Do(req *http.Request) (*http.Response, error) {
-	/*
-		req = login.WithCredentials(req)
-		resp, err := login.client.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusUnauthorized {
-			login.client.Jar = nil
-			req = login.withCredentials(req)
-			resp, err = login.client.Do(req)
-			if err != nil {
-				return err
-			}
-			defer resp.Body.Close()
-		}*/
-	return sf.client.Do(req)
+func (login *login) Do(req *http.Request) (*http.Response, error) {
+	req = login.withCredentials(req)
+	resp, err := login.client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		resp.Body.Close()
+		login.client.Jar = nil
+		req = login.withCredentials(req)
+		resp, err = login.client.Do(req)
+	}
+	return resp, err
 }
