@@ -21,7 +21,14 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, msg := srv.new(cmd, srv.publicHost(req))
+	host, err := srv.publicHost(req)
+	if err != nil {
+		err = fmt.Errorf("URL parse failed: %v", err)
+		http.Error(wr, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, msg := srv.new(cmd, host)
 	wr.Header().Add("Content-Type", "application/json")
 	_, err = msg.WriteTo(wr)
 	if err != nil {

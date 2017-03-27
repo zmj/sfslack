@@ -75,10 +75,14 @@ func httpValues(req *http.Request) (url.Values, error) {
 	}
 }
 
-func (srv *server) publicHost(req *http.Request) string {
+func (srv *server) publicHost(req *http.Request) (string, error) {
 	host := srv.config.Host
 	if host == "" {
-		host = req.URL.Host
+		url, err := url.ParseRequestURI(req.RequestURI)
+		if err != nil {
+			return "", fmt.Errorf("Failed to parse URL %v\n%v", req.RequestURI, err)
+		}
+		host = url.Host
 	}
-	return host
+	return host, nil
 }
