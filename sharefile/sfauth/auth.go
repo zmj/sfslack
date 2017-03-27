@@ -107,6 +107,7 @@ func tokenPost(acct sharefile.Account, values map[string]string) (oauthToken, er
 	if err != nil {
 		return oauthToken{}, err
 	}
+	token.account = acct
 	token = token.withExpiresAt()
 	return token, nil
 }

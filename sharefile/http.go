@@ -45,6 +45,9 @@ func (login *Login) doGet(ctx context.Context, url string, recv interface{}) err
 
 func (login *Login) do(ctx context.Context, req *http.Request, recv interface{}) error {
 	resp, err := login.Do(req)
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
