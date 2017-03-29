@@ -24,11 +24,12 @@ type Host interface {
 type Constructor func(Host) Workflow
 
 type Definition struct {
+	Arg         string
 	Description string
 	Constructor Constructor
 }
 
 var Definitions = struct{ Send, Request *Definition }{
-	Send:    &Definition{"Share Files", newSend},
-	Request: &Definition{"Request Files", newRequest},
+	Send:    &Definition{"send", "Share Files", newSend},
+	Request: &Definition{"request", "Request Files", newRequest},
 }

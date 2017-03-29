@@ -1,23 +1,21 @@
-package server
+package wfhost
 
 import (
-	"sync"
-
 	"net/url"
 
 	"fmt"
 
 	"github.com/zmj/sfslack/sharefile"
 
-	"github.com/zmj/sfslack/slack"
+	"github.com/zmj/sfslack/sharefile/sfauth"
 	"github.com/zmj/sfslack/workflow"
 )
 
-type runner struct {
+type Runner struct {
 	*replier
-	srv  *server
-	wfID int
-	urls callbackURLs
+	wfID    int
+	urls    CallbackURLs
+	authSvc *sfauth.Cache
 
 	def     *workflow.Definition
 	defWait chan struct{}
@@ -27,31 +25,12 @@ type runner struct {
 	loginWait   chan struct{}
 }
 
-func (srv *server) new(cmd slack.Command, host string) (*runner, slack.Message) {
-	first := make(chan slack.Message, 1)
-	r := &runner{
-		replier: &replier{
-			mu:         &sync.Mutex{},
-			firstReply: first,
-			cmd:        cmd,
-			replies:    make(chan reply),
-			done:       make(chan struct{}),
-		},
-		srv: srv,
-	}
-	srv.put(r)
-	r.urls = srv.callbackURLs(host, r.wfID)
-	go r.run()
-	go r.sendReplies()
-	return r, <-first
-}
-
-func (r *runner) run() {
+func (r *Runner) run() {
 	var err error
 	defer func() {
 		if err != nil {
 			r.ReplyErr(err)
-			r.srv.logErr(err)
+			//r.srv.logErr(err)
 		}
 		close(r.done)
 	}()
@@ -82,32 +61,36 @@ func (r *runner) run() {
 	}
 }
 
-func (r *runner) getDefinition() *workflow.Definition {
-	def, ok := wfTypes[r.cmd.Text]
-	if !ok {
-		r.mu.Lock()
-		r.defWait = make(chan struct{})
-		r.mu.Unlock()
-
-		r.Reply(helpMessage(r.urls.CommandClick))
-		<-r.defWait
-		def = r.def
+func (r *Runner) getDefinition() *workflow.Definition {
+	arg := r.cmd.Text
+	for _, def := range wfTypes {
+		if def.Arg == arg {
+			return def
+		}
 	}
-	return def
+
+	r.mu.Lock()
+	r.defWait = make(chan struct{})
+	r.mu.Unlock()
+
+	r.Reply(helpMessage(r.urls.CommandClick(r.wfID)))
+	<-r.defWait
+	return r.def
 }
 
-func (r *runner) getLogin() (*sharefile.Login, error) {
-	creds, ok := r.srv.authSvc.TryGet(r.cmd.User)
+func (r *Runner) getLogin() (*sharefile.Login, error) {
+	creds, ok := r.authSvc.TryGet(r.cmd.User)
 	if !ok {
 		r.mu.Lock()
 		r.loginWait = make(chan struct{})
 		r.mu.Unlock()
 
-		loginURL := r.srv.authSvc.LoginURL(r.urls.AuthCallback)
+		authURL := r.urls.AuthCallback(r.wfID)
+		loginURL := r.authSvc.LoginURL(authURL)
 		r.RedirectOrReply(loginURL, loginMessage(loginURL))
 		<-r.loginWait
 		var err error
-		creds, err = r.srv.authSvc.Add(r.cmd.User, r.loginValues)
+		creds, err = r.authSvc.Add(r.cmd.User, r.loginValues)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to add auth\n%v", err)
 		}
@@ -115,18 +98,34 @@ func (r *runner) getLogin() (*sharefile.Login, error) {
 	return &sharefile.Login{creds}, nil
 }
 
-func (r *runner) SetDefinition(def *workflow.Definition) {
+func (r *Runner) SetDefinition(values url.Values) error {
+	arg := values.Get(wfTypeQueryKey)
+	if arg == "" {
+		return fmt.Errorf("Missing wftype value")
+	}
+	var def *workflow.Definition
+	for _, d := range wfTypes {
+		if d.Arg == arg {
+			def = d
+			break
+		}
+	}
+	if def == nil {
+		return fmt.Errorf("Unknown workflow type '%v'", arg)
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.def != nil {
-		return
+		return fmt.Errorf("Already started workflow '%v'", r.def.Description)
 	}
 	r.def = def
 	r.useCurrent = false
 	close(r.defWait)
+	return nil
 }
 
-func (r *runner) SetLogin(cbValues url.Values) {
+func (r *Runner) SetLogin(cbValues url.Values) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.loginValues != nil {
@@ -137,19 +136,27 @@ func (r *runner) SetLogin(cbValues url.Values) {
 	close(r.loginWait)
 }
 
-func (r *runner) Name() string {
+func (r *Runner) Name() string {
 	time := r.cmd.Received.Format("2006-01-02 15:04:05")
 	return r.cmd.Channel.Name + " " + time
 }
 
-func (r *runner) User() string {
+func (r *Runner) User() string {
 	return r.cmd.User.Name
 }
 
-func (r *runner) Authenticate() *sharefile.Login {
+func (r *Runner) Authenticate() *sharefile.Login {
 	return r.login
 }
 
-func (r *runner) EventCallbackURL() string {
-	return r.urls.EventWebhook
+func (r *Runner) EventCallbackURL() string {
+	return r.urls.EventWebhook(r.wfID)
+}
+
+func (r *Runner) WaitingURL() string {
+	return r.urls.Waiting(r.wfID)
+}
+
+func (r *Runner) ErrorText(err error) string {
+	return errorText(err)
 }

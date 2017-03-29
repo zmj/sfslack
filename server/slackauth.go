@@ -5,11 +5,6 @@ import (
 	"net/http"
 )
 
-func (srv *server) sfAuth(wf *runner, wr http.ResponseWriter, req *http.Request) {
-	wf.SetLogin(req.URL.Query())
-	srv.redirect(wf, wr, req)
-}
-
 func (srv *server) slackAuth(wr http.ResponseWriter, req *http.Request) {
 	fmt.Printf("slack auth code %v\n", req.URL.Query().Get("code"))
 

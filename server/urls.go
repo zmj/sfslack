@@ -17,24 +17,27 @@ const (
 	redirectPath     = "/sfslack/next"
 	slackAuthPath    = "/sfslack/slackoauth"
 
-	wfidQueryKey   = "wfid"
-	wfTypeQueryKey = "wftype"
+	wfidQueryKey = "wfid"
 )
 
-type callbackURLs struct {
-	CommandClick string
-	AuthCallback string
-	EventWebhook string
-	Waiting      string
+type callbackUrls struct {
+	host string
 }
 
-func (s *server) callbackURLs(host string, wfID int) callbackURLs {
-	return callbackURLs{
-		CommandClick: wfURL(host, commandClickPath, wfID),
-		AuthCallback: wfURL(host, sfAuthPath, wfID),
-		EventWebhook: wfURL(host, eventPath, wfID),
-		Waiting:      wfURL(host, redirectPath, wfID),
-	}
+func (cb callbackUrls) CommandClick(wfID int) string {
+	return wfURL(cb.host, commandClickPath, wfID)
+}
+
+func (cb callbackUrls) AuthCallback(wfID int) string {
+	return wfURL(cb.host, sfAuthPath, wfID)
+}
+
+func (cb callbackUrls) EventWebhook(wfID int) string {
+	return wfURL(cb.host, eventPath, wfID)
+}
+
+func (cb callbackUrls) Waiting(wfID int) string {
+	return wfURL(cb.host, redirectPath, wfID)
 }
 
 func wfURL(host, path string, wfID int) string {

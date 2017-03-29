@@ -4,14 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/zmj/sfslack/server/wfhost"
 	"github.com/zmj/sfslack/slack"
-	"github.com/zmj/sfslack/workflow"
 )
-
-var wfTypes = map[string]*workflow.Definition{
-	"send":    workflow.Definitions.Send,
-	"request": workflow.Definitions.Request,
-}
 
 func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	cmd, err := srv.parseCommand(req)
@@ -21,7 +16,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, msg := srv.new(cmd, srv.publicHost(req))
+	_, msg := srv.wfSvc.New(cmd, callbackUrls{srv.publicHost(req)})
 	wr.Header().Add("Content-Type", "application/json")
 	_, err = msg.WriteTo(wr)
 	if err != nil {
@@ -31,15 +26,12 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (srv *server) newCommandClick(wf *runner, wr http.ResponseWriter, req *http.Request) {
-	wfType := req.URL.Query().Get(wfTypeQueryKey)
-	def, ok := wfTypes[wfType]
-	if !ok {
-		http.Error(wr, "Unknown workflow type", http.StatusBadRequest)
+func (srv *server) newCommandClick(wf *wfhost.Runner, wr http.ResponseWriter, req *http.Request) {
+	err := wf.SetDefinition(req.URL.Query())
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	wf.SetDefinition(def)
 	srv.redirect(wf, wr, req)
 }
 

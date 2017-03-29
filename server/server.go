@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"sync"
-
+	"github.com/zmj/sfslack/server/wfhost"
 	"github.com/zmj/sfslack/sharefile/sfauth"
 )
 
@@ -15,11 +14,9 @@ const (
 )
 
 type server struct {
-	config    Config
-	authSvc   *sfauth.Cache // only used in wfsvc
-	workflows map[int]*runner
-	mu        *sync.Mutex
-	wfID      int
+	config  Config
+	authSvc *sfauth.Cache // only used in wfsvc
+	wfSvc   *wfhost.Cache
 }
 
 func NewServer(cfg Config) (*http.Server, error) {
@@ -28,10 +25,9 @@ func NewServer(cfg Config) (*http.Server, error) {
 		return nil, fmt.Errorf("Bad config: %v", err)
 	}
 	srv := &server{
-		config:    cfg,
-		authSvc:   sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret),
-		workflows: make(map[int]*runner),
-		mu:        &sync.Mutex{},
+		config:  cfg,
+		authSvc: sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret),
+		wfSvc:   wfhost.New(),
 	}
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%v", cfg.Port),
@@ -52,35 +48,22 @@ func (srv *server) handler() http.Handler {
 	return mux
 }
 
-func (srv *server) wfHandler(h func(*runner, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+type wfHandler func(*wfhost.Runner, http.ResponseWriter, *http.Request)
+
+func (srv *server) wfHandler(h wfHandler) http.HandlerFunc {
 	return func(wr http.ResponseWriter, req *http.Request) {
 		wfID, err := wfID(req)
 		if err != nil {
 			http.Error(wr, err.Error(), http.StatusBadRequest)
 			return
 		}
-		wf, ok := srv.get(wfID)
+		wf, ok := srv.wfSvc.Get(wfID)
 		if !ok {
 			http.Error(wr, "Workflow not found", http.StatusInternalServerError)
 			return
 		}
 		h(wf, wr, req)
 	}
-}
-
-func (srv *server) get(wfID int) (*runner, bool) {
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	r, ok := srv.workflows[wfID]
-	return r, ok
-}
-
-func (srv *server) put(r *runner) {
-	srv.mu.Lock()
-	defer srv.mu.Unlock()
-	srv.wfID++
-	r.wfID = srv.wfID
-	srv.workflows[srv.wfID] = r
 }
 
 func printReq(wr http.ResponseWriter, req *http.Request) {

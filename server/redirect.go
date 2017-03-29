@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/zmj/sfslack/server/wfhost"
 )
 
 const (
 	redirectTimeout = 3 * time.Second
 )
 
-func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Request) {
+func (srv *server) redirect(wf *wfhost.Runner, wr http.ResponseWriter, req *http.Request) {
 	type redirect struct {
 		url string
 		err error
@@ -26,7 +28,7 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 	case r := <-redir:
 		accept <- true
 		if r.err != nil {
-			wr.Write([]byte(errorText(r.err)))
+			wr.Write([]byte(wf.ErrorText(r.err)))
 			return
 		}
 		if r.url == "" {
@@ -36,7 +38,7 @@ func (srv *server) redirect(wf *runner, wr http.ResponseWriter, req *http.Reques
 		http.Redirect(wr, req, r.url, http.StatusFound)
 	case <-time.After(redirectTimeout):
 		accept <- false
-		wr.Write([]byte(waitHTML(wf.urls.Waiting)))
+		wr.Write([]byte(waitHTML(wf.WaitingURL())))
 	}
 }
 

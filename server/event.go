@@ -1,10 +1,14 @@
 package server
 
-import "net/http"
-import "net/http/httputil"
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+	"net/http/httputil"
 
-func (srv *server) eventCallback(wf *runner, wr http.ResponseWriter, req *http.Request) {
+	"github.com/zmj/sfslack/server/wfhost"
+)
+
+func (srv *server) eventCallback(wf *wfhost.Runner, wr http.ResponseWriter, req *http.Request) {
 	fmt.Println("")
 	fmt.Println("event!")
 	bytes, _ := httputil.DumpRequest(req, true)
