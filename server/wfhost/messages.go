@@ -36,7 +36,6 @@ var wfTypes = []*workflow.Definition{
 
 func helpMessage(wfClickURL string) slack.Message {
 	var links []string
-	wfTypes := []*workflow.Definition{}
 	for _, def := range wfTypes {
 		link := fmt.Sprintf("%v&%v=%v", wfClickURL, wfTypeQueryKey, def.Arg)
 		links = append(links, slack.FormatURL(link, def.Description))

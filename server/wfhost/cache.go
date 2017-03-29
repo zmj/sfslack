@@ -3,17 +3,20 @@ package wfhost
 import (
 	"sync"
 
+	"github.com/zmj/sfslack/sharefile/sfauth"
 	"github.com/zmj/sfslack/slack"
 )
 
 type Cache struct {
+	authSvc   *sfauth.Cache
 	workflows map[int]*Runner
 	mu        *sync.Mutex
 	wfID      int
 }
 
-func New() *Cache {
+func New(authSvc *sfauth.Cache) *Cache {
 	return &Cache{
+		authSvc:   authSvc,
 		workflows: make(map[int]*Runner),
 		mu:        &sync.Mutex{},
 	}
@@ -36,7 +39,8 @@ func (c *Cache) New(cmd slack.Command, urls CallbackURLs) (*Runner, slack.Messag
 			replies:    make(chan reply),
 			done:       make(chan struct{}),
 		},
-		urls: urls,
+		urls:    urls,
+		authSvc: c.authSvc,
 	}
 	c.put(r)
 	go r.run()

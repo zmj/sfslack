@@ -25,9 +25,8 @@ func NewServer(cfg Config) (*http.Server, error) {
 		return nil, fmt.Errorf("Bad config: %v", err)
 	}
 	srv := &server{
-		config:  cfg,
-		authSvc: sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret),
-		wfSvc:   wfhost.New(),
+		config: cfg,
+		wfSvc:  wfhost.New(sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret)),
 	}
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%v", cfg.Port),
