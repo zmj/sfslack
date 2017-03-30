@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/zmj/sfslack/log"
+
 	"github.com/zmj/sfslack/server/wfhost"
 	"github.com/zmj/sfslack/sharefile/sfauth"
 )
@@ -17,16 +19,18 @@ type server struct {
 	config  Config
 	authSvc *sfauth.Cache // only used in wfsvc
 	wfSvc   *wfhost.Cache
+	log     *log.Logger
 }
 
-func NewServer(cfg Config) (*http.Server, error) {
+func NewServer(cfg Config, log *log.Logger) (*http.Server, error) {
 	err := cfg.validate()
 	if err != nil {
 		return nil, fmt.Errorf("Bad config: %v", err)
 	}
 	srv := &server{
 		config: cfg,
-		wfSvc:  wfhost.New(sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret)),
+		wfSvc:  wfhost.New(sfauth.New(cfg.SfOAuthID, cfg.SfOAuthSecret), log),
+		log:    log,
 	}
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%v", cfg.Port),
@@ -69,11 +73,4 @@ func printReq(wr http.ResponseWriter, req *http.Request) {
 	bytes, _ := httputil.DumpRequest(req, true)
 	fmt.Println(string(bytes))
 	http.Error(wr, "", http.StatusNotFound)
-}
-
-func (srv *server) logErr(err error) {
-	if err == nil {
-		return
-	}
-	// todo
 }

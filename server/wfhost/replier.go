@@ -3,6 +3,7 @@ package wfhost
 import (
 	"sync"
 
+	"github.com/zmj/sfslack/log"
 	"github.com/zmj/sfslack/slack"
 	"github.com/zmj/sfslack/workflow"
 )
@@ -16,6 +17,7 @@ type replier struct {
 	repliesSent int
 	cmd         slack.Command
 	wf          workflow.Workflow
+	log         *log.Logger
 
 	done    chan struct{}
 	replies chan reply
@@ -88,7 +90,7 @@ func (r *replier) sendMsg(msg slack.Message) {
 
 	err := msg.RespondTo(r.cmd)
 	if err != nil {
-		// log
+		r.log.Err(err)
 		return
 	}
 	r.repliesSent++

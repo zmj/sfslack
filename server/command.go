@@ -20,7 +20,7 @@ func (srv *server) newCommand(wr http.ResponseWriter, req *http.Request) {
 	wr.Header().Add("Content-Type", "application/json")
 	_, err = msg.WriteTo(wr)
 	if err != nil {
-		srv.logErr(err)
+		srv.log.Err(err)
 		http.Error(wr, err.Error(), http.StatusInternalServerError)
 		return
 	}

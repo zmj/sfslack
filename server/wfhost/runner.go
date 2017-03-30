@@ -30,7 +30,7 @@ func (r *Runner) run() {
 	defer func() {
 		if err != nil {
 			r.ReplyErr(err)
-			//r.srv.logErr(err)
+			r.log.Err(err)
 		}
 		close(r.done)
 	}()
