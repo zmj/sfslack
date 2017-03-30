@@ -8,6 +8,8 @@ import (
 
 	"os"
 
+	"time"
+
 	"github.com/zmj/sfslack/server"
 )
 
@@ -21,14 +23,12 @@ func main() {
 	flag.Parse()
 	// validate before open log, not in server
 
-	logfile, err := os.Open("log.txt") // from args?
+	logFileName := fmt.Sprintf("%v.log", time.Now().String())
+	logfile, err := os.Open(logFileName) // from args?
 	if err != nil {
-		logfile, err = os.Create("log.txt")
-		if err != nil {
-			err = fmt.Errorf("Failed to open log file\n%v", err)
-			fmt.Println(err.Error)
-			return
-		}
+		err = fmt.Errorf("Failed to create log file\n%v", err)
+		fmt.Println(err.Error)
+		return
 	}
 	srv, err := server.NewServer(cfg, log.New(logfile, true))
 	if err != nil {
