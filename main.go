@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 	// validate before open log, not in server
 
-	logFileName := fmt.Sprintf("%v.log", time.Now().Format(time.Stamp))
+	logFileName := fmt.Sprintf("logs/%v.log", time.Now().Format(time.Stamp))
 	logfile, err := os.Create(logFileName)
 	if err != nil {
 		err = fmt.Errorf("Failed to create log file\n%v", err)

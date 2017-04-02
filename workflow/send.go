@@ -52,7 +52,7 @@ func (wf *sendWorkflow) Event() {
 
 func (wf *sendWorkflow) Listen() error {
 	if wf.Err != nil {
-		return fmt.Errorf("Workflow already error\n%v", wf.err)
+		return fmt.Errorf("Workflow already error\n%v", wf.Err)
 	}
 	return nil
 }
