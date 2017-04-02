@@ -67,11 +67,17 @@ func httpValues(req *http.Request) (url.Values, error) {
 	if req.Method == "GET" {
 		return req.URL.Query(), nil
 	} else if req.Method == "POST" {
+		values := req.URL.Query()
 		err := req.ParseForm()
 		if err != nil {
 			return url.Values{}, err
 		}
-		return req.PostForm, nil
+		for k, vs := range req.PostForm {
+			for _, v := range vs {
+				values[k] = append(values[k], v)
+			}
+		}
+		return values, nil
 	} else {
 		return url.Values{}, fmt.Errorf("Unsupported HTTP method '%v'", req.Method)
 	}
