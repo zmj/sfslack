@@ -15,7 +15,7 @@ const (
 func (wf *wfBase) createWorkflowFolder() (sharefile.Folder, error) {
 	slackFolder, err := getOrCreateSlackFolder(wf.sf)
 	if err != nil {
-		return sharefile.Folder{}, fmt.Errorf("Failed to get slack folder\n%v", err)
+		return sharefile.Folder{}, fmt.Errorf("Failed to get slack folder: %v", err)
 	}
 	return wf.sf.CreateFolder(context.TODO(), wf.Name(), slackFolder.ID)
 }
@@ -23,7 +23,7 @@ func (wf *wfBase) createWorkflowFolder() (sharefile.Folder, error) {
 func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
 	children, err := sf.GetChildren(context.TODO(), "home")
 	if err != nil {
-		return sharefile.Folder{}, fmt.Errorf("Failed to get home folder children\n%v", err)
+		return sharefile.Folder{}, fmt.Errorf("Failed to get home folder children: %v", err)
 	}
 	for _, item := range children {
 		folder, err := item.Folder()

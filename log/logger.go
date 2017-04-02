@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"log"
 )
@@ -44,5 +45,6 @@ func (l *Logger) Err(err error) {
 func (l *Logger) write() {
 	for s := range l.entries {
 		l.logger.Println(s)
+		fmt.Println(s)
 	}
 }
