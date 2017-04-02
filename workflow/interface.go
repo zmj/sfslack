@@ -8,6 +8,7 @@ import (
 type Workflow interface {
 	Setup() error
 	Listen() error
+	Event(sharefile.WebhookSubscriptionEvent)
 	Cleanup() error
 }
 

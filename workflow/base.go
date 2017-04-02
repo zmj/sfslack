@@ -11,6 +11,7 @@ type wfBase struct {
 	sf      *sharefile.Login
 	started time.Time
 	err     error
+	events  chan sharefile.WebhookSubscriptionEvent
 }
 
 func newBase(host Host) *wfBase {
@@ -27,4 +28,13 @@ func (wf *wfBase) Err() error {
 
 func (wf *wfBase) Cleanup() error {
 	return nil
+}
+
+func (wf *wfBase) Event(event sharefile.WebhookSubscriptionEvent) {
+	if wf.err != nil {
+		return // err->unsub?
+	}
+	go func() {
+		wf.events <- event
+	}()
 }

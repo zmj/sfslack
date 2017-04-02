@@ -39,24 +39,24 @@ func (r *Runner) run() {
 	r.def = r.getDefinition()
 	login, err := r.getLogin()
 	if err != nil {
-		err = fmt.Errorf("Error during authentication\n%v", err)
+		err = fmt.Errorf("Error during authentication: %v", err)
 		return
 	}
 	r.login = login
 	wf := r.def.Constructor(r)
 	err = wf.Setup()
 	if err != nil {
-		err = fmt.Errorf("Error during setup\n%v", err)
+		err = fmt.Errorf("Error during setup: %v", err)
 		return
 	}
 	err = wf.Listen()
 	if err != nil {
-		err = fmt.Errorf("Error during listen\n%v", err)
+		err = fmt.Errorf("Error during listen: %v", err)
 		return
 	}
 	err = wf.Cleanup()
 	if err != nil {
-		err = fmt.Errorf("Error during cleanup\n%v", err)
+		err = fmt.Errorf("Error during cleanup: %v", err)
 		return
 	}
 }
@@ -92,7 +92,7 @@ func (r *Runner) getLogin() (*sharefile.Login, error) {
 		var err error
 		creds, err = r.authSvc.Add(r.cmd.User, r.loginValues)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to add auth\n%v", err)
+			return nil, fmt.Errorf("Failed to add auth: %v", err)
 		}
 	}
 	return &sharefile.Login{creds}, nil
@@ -117,6 +117,7 @@ func (r *Runner) SetDefinition(values url.Values) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.def != nil {
+		// ok if same, redir
 		return fmt.Errorf("Already started workflow '%v'", r.def.Description)
 	}
 	r.def = def
@@ -159,4 +160,8 @@ func (r *Runner) WaitingURL() string {
 
 func (r *Runner) ErrorText(err error) string {
 	return errorText(err)
+}
+
+func (r *Runner) Event(event sharefile.WebhookSubscriptionEvent) {
+	r.wf.Event(event)
 }
