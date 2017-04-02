@@ -38,20 +38,10 @@ func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
 }
 
 func (wf *wfBase) subscribe(folder sharefile.Folder) error {
-	toCreate := sharefile.WebhookSubscription{
-		SubscriptionContext: sharefile.SubscriptionContext{
-			ResourceType: sharefile.ResourceTypeFolder,
-			ResourceId:   folder.ID,
-		},
-		Events: []sharefile.SubscribedResourceEvent{
-			sharefile.SubscribedResourceEvent{
-				ResourceType:  sharefile.ResourceTypeFile,
-				OperationName: sharefile.OperationNameUpload,
-			},
-		},
-		WebhookURL: wf.Host.EventCallbackURL(),
-	}
 	// save sub on base for cleanup
-	_, err := wf.sf.CreateSubscription(context.TODO(), toCreate)
+	_, err := wf.sf.Subscribe(context.TODO(),
+		folder,
+		wf.Host.EventCallbackURL(),
+		sharefile.OperationNameUpload)
 	return err
 }
