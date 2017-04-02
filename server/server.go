@@ -57,16 +57,27 @@ func (srv *server) wfHandler(h wfHandler) http.HandlerFunc {
 	return func(wr http.ResponseWriter, req *http.Request) {
 		wfID, err := wfID(req)
 		if err != nil {
+			err = fmt.Errorf("Couldn't parse wfID: %v", err)
 			http.Error(wr, err.Error(), http.StatusBadRequest)
+			srv.logErr(err)
 			return
 		}
 		wf, ok := srv.wfSvc.Get(wfID)
 		if !ok {
-			http.Error(wr, "Workflow not found", http.StatusInternalServerError)
+			err = fmt.Errorf("Workflow not found '%v'", wfID)
+			http.Error(wr, err.Error(), http.StatusInternalServerError)
+			srv.logErr(err)
 			return
 		}
 		h(wf, wr, req)
 	}
+}
+
+func (srv *server) logErr(err error) {
+	if err == nil {
+		return
+	}
+	srv.log.Err(err)
 }
 
 func printReq(wr http.ResponseWriter, req *http.Request) {
