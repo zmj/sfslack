@@ -54,7 +54,7 @@ func wfID(req *http.Request) (int, error) {
 	}
 	wfidStr := values.Get(wfidQueryKey)
 	if wfidStr == "" {
-		return 0, fmt.Errorf("Missing '%v': %v", wfidQueryKey, req.RequestURI)
+		return 0, fmt.Errorf("Missing '%v': %v %v", wfidQueryKey, req.Method, req.RequestURI)
 	}
 	wfID, err := strconv.Atoi(wfidStr)
 	if err != nil {
