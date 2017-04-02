@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -51,15 +50,15 @@ func wfURL(host, path string, wfID int) string {
 func wfID(req *http.Request) (int, error) {
 	values, err := httpValues(req)
 	if err != nil {
-		return 0, errors.New("Missing wfID")
+		return 0, fmt.Errorf("Missing request values: %v", err)
 	}
 	wfidStr := values.Get(wfidQueryKey)
 	if wfidStr == "" {
-		return 0, errors.New("Missing wfID")
+		return 0, fmt.Errorf("Missing '%v': %v", wfidQueryKey, req.RequestURI)
 	}
 	wfID, err := strconv.Atoi(wfidStr)
 	if err != nil {
-		return wfID, errors.New("Invalid wfID")
+		return wfID, fmt.Errorf("Invalid wfID '%v' %v", wfID, err)
 	}
 	return wfID, nil
 }
