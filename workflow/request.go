@@ -28,13 +28,27 @@ func (wf *requestWorkflow) Setup() error {
 		wf.err = err
 		return err
 	}
-	// go subscribe
+
+	c := make(chan struct{})
+	go func() {
+		err := wf.subscribe(folder)
+		if err != nil {
+			wf.err = fmt.Errorf("Failed to subscribe: %v", err)
+		}
+		c <- struct{}{}
+	}()
+
 	requestShare, err := wf.sf.CreateRequestShare(context.TODO(), folder.ID)
 	if err != nil {
 		wf.err = err
 		return err // cancel sub - check done / shutdown called?
 	}
-	// wait for subscribe
+
+	<-c
+	if wf.err != nil {
+		return wf.err
+	}
+
 	uploadURL := requestShare.URI
 	wf.Reply(wf.requestMessage(uploadURL))
 

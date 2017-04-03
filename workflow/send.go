@@ -33,19 +33,25 @@ func (wf *sendWorkflow) Setup() error {
 	}
 	wf.folder = folder
 
-	// go subscribe
-	err = wf.subscribe(folder)
-	if err != nil {
-		wf.err = fmt.Errorf("Failed to subscribe to workflow folder: %v", err)
-		return wf.err
-	}
+	c := make(chan struct{})
+	go func() {
+		err = wf.subscribe(folder)
+		if err != nil {
+			wf.err = fmt.Errorf("Failed to subscribe to workflow folder: %v", err)
+		}
+	}()
 
 	requestShare, err := wf.sf.CreateRequestShare(context.TODO(), folder.ID)
 	if err != nil {
 		wf.err = fmt.Errorf("Failed to create request share: %v", err)
 		return wf.err // cancel sub - check done / shutdown called?
 	}
-	// wait for subscribe
+
+	<-c
+	if wf.err != nil {
+		return wf.err
+	}
+
 	uploadURL := requestShare.URI
 	wf.RedirectOrReply(uploadURL, uploadMessage(uploadURL))
 
