@@ -12,6 +12,8 @@ type wfBase struct {
 	started time.Time
 	err     error
 	events  chan sharefile.WebhookSubscriptionEvent
+	folder  sharefile.Folder
+	files   []sharefile.File
 }
 
 func newBase(host Host) *wfBase {

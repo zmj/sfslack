@@ -13,8 +13,6 @@ import (
 
 type sendWorkflow struct {
 	*wfBase
-	folder        sharefile.Folder
-	files         []sharefile.File
 	downloadShare *sharefile.Share
 }
 
@@ -73,7 +71,7 @@ func (wf *sendWorkflow) Listen() error {
 				wf.err = fmt.Errorf("Failed to get info for upload notification: %v", err)
 				return wf.err
 			}
-			err = wf.addToShare(newFiles)
+			wf.downloadShare, err = addToShare(wf.sf, wf.downloadShare, newFiles)
 			if err != nil {
 				wf.err = fmt.Errorf("Failed to make share for notification: %v", err)
 				return wf.err
@@ -86,25 +84,6 @@ func (wf *sendWorkflow) Listen() error {
 			return nil
 		}
 	}
-}
-
-func (wf *sendWorkflow) addToShare(newFiles []sharefile.File) error {
-	if wf.downloadShare == nil {
-		share, err := wf.sf.CreateSendShare(context.TODO(), newFiles)
-		if err != nil {
-			wf.err = fmt.Errorf("Failed to create share: %v", err)
-			return wf.err
-		}
-		wf.downloadShare = &share
-	} else {
-		share, err := wf.sf.UpdateSendShare(context.TODO(), *wf.downloadShare, newFiles)
-		if err != nil {
-			wf.err = fmt.Errorf("Failed to update share: %v", err)
-			return wf.err
-		}
-		wf.downloadShare = &share
-	}
-	return nil
 }
 
 func uploadMessage(uploadURL string) slack.Message {
@@ -135,32 +114,4 @@ func (wf *sendWorkflow) downloadMessage() slack.Message {
 		}
 	}
 	return msg
-}
-
-func (wf *sendWorkflow) getNewFiles() ([]sharefile.File, error) {
-	children, err := wf.sf.GetChildren(context.TODO(), wf.folder.ID)
-	if err != nil {
-		wf.err = fmt.Errorf("New file check failed to get folder contents: %v", err)
-		return nil, wf.err
-	}
-	var newChildren []sharefile.File
-	for _, child := range children {
-		fi, err := child.File()
-		if err != nil {
-			continue
-		}
-		known := false
-		for _, existing := range wf.files {
-			if existing.ID == child.ID {
-				known = true
-				break
-			}
-		}
-		if known {
-			continue
-		}
-		newChildren = append(newChildren, fi)
-		wf.files = append(wf.files, fi)
-	}
-	return newChildren, nil
 }

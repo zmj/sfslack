@@ -45,3 +45,48 @@ func (wf *wfBase) subscribe(folder sharefile.Folder) error {
 		sharefile.OperationNameUpload)
 	return err
 }
+
+func (wf *wfBase) getNewFiles() ([]sharefile.File, error) {
+	children, err := wf.sf.GetChildren(context.TODO(), wf.folder.ID)
+	if err != nil {
+		wf.err = fmt.Errorf("New file check failed to get folder contents: %v", err)
+		return nil, wf.err
+	}
+	var newChildren []sharefile.File
+	for _, child := range children {
+		fi, err := child.File()
+		if err != nil {
+			continue
+		}
+		known := false
+		for _, existing := range wf.files {
+			if existing.ID == child.ID {
+				known = true
+				break
+			}
+		}
+		if known {
+			continue
+		}
+		newChildren = append(newChildren, fi)
+		wf.files = append(wf.files, fi)
+	}
+	return newChildren, nil
+}
+
+func addToShare(sf *sharefile.Login, share *sharefile.Share, newFiles []sharefile.File) (*sharefile.Share, error) {
+	var result sharefile.Share
+	var err error
+	if share == nil {
+		result, err = sf.CreateSendShare(context.TODO(), newFiles)
+		if err != nil {
+			err = fmt.Errorf("Failed to create share: %v", err)
+		}
+	} else {
+		result, err = sf.UpdateSendShare(context.TODO(), *share, newFiles)
+		if err != nil {
+			err = fmt.Errorf("Failed to update share: %v", err)
+		}
+	}
+	return &result, err
+}
