@@ -17,7 +17,5 @@ func (srv *server) eventCallback(wf *wfhost.Runner, wr http.ResponseWriter, req 
 		return
 	}
 
-	fmt.Println("a")
 	wf.Event(event)
-	fmt.Println("b")
 }

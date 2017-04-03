@@ -61,45 +61,49 @@ func (wf *sendWorkflow) Listen() error {
 
 	var notify <-chan time.Time
 	done := time.After(10 * time.Minute)
-	for quit := false; !quit; {
+	for {
 		select {
 		case <-wf.events:
-			fmt.Println("e")
 			notify = time.After(1 * time.Second)
 		case <-notify:
-			fmt.Println("f")
 			notify = nil
 			done = time.After(5 * time.Minute)
 			newFiles, err := wf.getNewFiles()
 			if err != nil {
-				wf.err = fmt.Errorf("Failed to notify of upload: %v", err)
+				wf.err = fmt.Errorf("Failed to get info for upload notification: %v", err)
 				return wf.err
 			}
-			if wf.downloadShare == nil {
-				share, err := wf.sf.CreateSendShare(context.TODO(), newFiles)
-				if err != nil {
-					wf.err = fmt.Errorf("Failed to create share: %v", err)
-					return wf.err
-				}
-				wf.downloadShare = &share
-			} else {
-				share, err := wf.sf.UpdateSendShare(context.TODO(), *wf.downloadShare, newFiles)
-				if err != nil {
-					wf.err = fmt.Errorf("Failed to update share: %v", err)
-					return wf.err
-				}
-				wf.downloadShare = &share
+			err = wf.addToShare(newFiles)
+			if err != nil {
+				wf.err = fmt.Errorf("Failed to make share for notification: %v", err)
+				return wf.err
 			}
-			msg := wf.downloadMessage()
-			accepted := wf.Host.Reply(msg)
+			accepted := wf.Host.Reply(wf.downloadMessage())
 			if !accepted {
-				quit = true
+				return nil
 			}
 		case <-done:
-			quit = true
+			return nil
 		}
 	}
+}
 
+func (wf *sendWorkflow) addToShare(newFiles []sharefile.File) error {
+	if wf.downloadShare == nil {
+		share, err := wf.sf.CreateSendShare(context.TODO(), newFiles)
+		if err != nil {
+			wf.err = fmt.Errorf("Failed to create share: %v", err)
+			return wf.err
+		}
+		wf.downloadShare = &share
+	} else {
+		share, err := wf.sf.UpdateSendShare(context.TODO(), *wf.downloadShare, newFiles)
+		if err != nil {
+			wf.err = fmt.Errorf("Failed to update share: %v", err)
+			return wf.err
+		}
+		wf.downloadShare = &share
+	}
 	return nil
 }
 

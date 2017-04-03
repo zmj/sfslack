@@ -44,6 +44,7 @@ func (r *Runner) run() {
 	}
 	r.login = login
 	wf := r.def.Constructor(r)
+	r.wf = wf
 	err = wf.Setup()
 	if err != nil {
 		err = fmt.Errorf("Error during setup: %v", err)
@@ -163,7 +164,5 @@ func (r *Runner) ErrorText(err error) string {
 }
 
 func (r *Runner) Event(event sharefile.WebhookSubscriptionEvent) {
-	fmt.Println("c")
 	r.wf.Event(event)
-	fmt.Println("d")
 }
