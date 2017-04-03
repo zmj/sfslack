@@ -4,7 +4,7 @@ import "context"
 
 func (sf Login) CreateRequestShare(ctx context.Context, parentFolderId string) (Share, error) {
 	toCreate := Share{ShareType: "Request",
-		Parent: Folder{Item: Item{URL: sf.Account().itemURL("Items", parentFolderId)}}}
+		Parent: &Folder{Item: Item{URL: sf.Account().itemURL("Items", parentFolderId)}}}
 	return sf.CreateShare(ctx, toCreate)
 }
 
@@ -33,7 +33,7 @@ func (sf Login) CreateShare(ctx context.Context, toCreate Share) (Share, error) 
 
 func (sf Login) UpdateShare(ctx context.Context, toUpdate Share) (Share, error) {
 	result := Share{}
-	err := sf.doPatch(ctx, sf.Account().entityURL("Shares"), toUpdate, &result)
+	err := sf.doPatch(ctx, toUpdate.URL, toUpdate, &result)
 	return result, err
 }
 
