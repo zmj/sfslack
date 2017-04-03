@@ -19,6 +19,7 @@ func newBase(host Host) *wfBase {
 		Host:    host,
 		sf:      host.Authenticate(),
 		started: time.Now(),
+		events:  make(chan sharefile.WebhookSubscriptionEvent),
 	}
 }
 
