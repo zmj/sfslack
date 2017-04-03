@@ -64,8 +64,10 @@ func (wf *sendWorkflow) Listen() error {
 	for quit := false; !quit; {
 		select {
 		case <-wf.events:
+			fmt.Println("e")
 			notify = time.After(1 * time.Second)
 		case <-notify:
+			fmt.Println("f")
 			notify = nil
 			done = time.After(5 * time.Minute)
 			newFiles, err := wf.getNewFiles()

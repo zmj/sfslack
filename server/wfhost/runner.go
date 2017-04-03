@@ -163,5 +163,7 @@ func (r *Runner) ErrorText(err error) string {
 }
 
 func (r *Runner) Event(event sharefile.WebhookSubscriptionEvent) {
+	fmt.Println("c")
 	r.wf.Event(event)
+	fmt.Println("d")
 }
