@@ -17,9 +17,23 @@ func (sf Login) CreateSendShare(ctx context.Context, files []File) (Share, error
 	return sf.CreateShare(ctx, toCreate)
 }
 
+func (sf Login) UpdateSendShare(ctx context.Context, share Share, files []File) (Share, error) {
+	toUpdate := Share{
+		URL:   share.URL,
+		Items: files,
+	}
+	return sf.UpdateShare(ctx, toUpdate)
+}
+
 func (sf Login) CreateShare(ctx context.Context, toCreate Share) (Share, error) {
 	result := Share{}
 	err := sf.doPost(ctx, sf.Account().entityURL("Shares"), toCreate, &result)
+	return result, err
+}
+
+func (sf Login) UpdateShare(ctx context.Context, toUpdate Share) (Share, error) {
+	result := Share{}
+	err := sf.doPatch(ctx, sf.Account().entityURL("Shares"), toUpdate, &result)
 	return result, err
 }
 
