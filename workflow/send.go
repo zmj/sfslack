@@ -31,7 +31,6 @@ func (wf *sendWorkflow) Setup() error {
 		wf.err = fmt.Errorf("Failed to create workflow folder: %v", err)
 		return wf.err
 	}
-	wf.folder = folder
 
 	c := make(chan struct{})
 	go func() {

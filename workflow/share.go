@@ -17,7 +17,12 @@ func (wf *wfBase) createWorkflowFolder() (sharefile.Folder, error) {
 	if err != nil {
 		return sharefile.Folder{}, fmt.Errorf("Failed to get slack folder: %v", err)
 	}
-	return wf.sf.CreateFolder(context.TODO(), wf.Name(), slackFolder.ID)
+	folder, err := wf.sf.CreateFolder(context.TODO(), wf.Name(), slackFolder.ID)
+	if err != nil {
+		return sharefile.Folder{}, fmt.Errorf("Failed to create workflow folder: %v", err)
+	}
+	wf.folder = folder
+	return folder, nil
 }
 
 func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
