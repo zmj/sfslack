@@ -39,6 +39,7 @@ func (wf *sendWorkflow) Setup() error {
 		if err != nil {
 			wf.err = fmt.Errorf("Failed to subscribe to workflow folder: %v", err)
 		}
+		c <- struct{}{}
 	}()
 
 	requestShare, err := wf.sf.CreateRequestShare(context.TODO(), folder.ID)
