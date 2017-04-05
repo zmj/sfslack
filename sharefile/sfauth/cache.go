@@ -46,6 +46,7 @@ func (c *Cache) Add(key interface{}, oauthCode url.Values) (sharefile.Credential
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("%v login %v\n", time.Now().Format(time.Stamp), key)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	login := &login{
@@ -83,6 +84,7 @@ func (c *Cache) refreshLoop(key interface{}) {
 			if err != nil {
 				continue
 			}
+			fmt.Printf("%v refresh %v\n", time.Now().Format(time.Stamp), key)
 			login.token = token
 		}
 	}

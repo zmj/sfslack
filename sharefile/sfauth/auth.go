@@ -40,6 +40,7 @@ func (login *login) withCredentials(req *http.Request) *http.Request {
 	url, _ := url.Parse(fmt.Sprintf("https://%v.%v", login.account.Subdomain, login.account.APIControlPlane))
 	cookies := login.client.Jar.Cookies(url)
 	if len(cookies) == 0 { // && len(req.Header.Get("Authorization")) == 0 {
+		fmt.Printf("%v Authorization\n", time.Now().Format(time.Stamp))
 		req.Header.Add("Authorization", "Bearer "+login.token.AccessToken)
 	}
 	return req
