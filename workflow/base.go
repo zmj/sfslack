@@ -1,19 +1,23 @@
 package workflow
 
 import (
+	"context"
 	"time"
+
+	"fmt"
 
 	"github.com/zmj/sfslack/sharefile"
 )
 
 type wfBase struct {
 	Host
-	sf      *sharefile.Login
-	started time.Time
-	err     error
-	events  chan sharefile.WebhookSubscriptionEvent
-	folder  sharefile.Folder
-	files   []sharefile.File
+	sf           *sharefile.Login
+	started      time.Time
+	err          error
+	events       chan sharefile.WebhookSubscriptionEvent
+	folder       sharefile.Folder
+	files        []sharefile.File
+	subscription *sharefile.WebhookSubscription
 }
 
 func newBase(host Host) *wfBase {
@@ -30,7 +34,15 @@ func (wf *wfBase) Err() error {
 }
 
 func (wf *wfBase) Cleanup() error {
-	return nil
+	var err error
+	if wf.subscription != nil && wf.sf != nil {
+		e := wf.sf.DeleteSubscription(context.TODO(), wf.subscription.ID)
+		if e != nil {
+			err = fmt.Errorf("Failed to unsubscribe: %v", e)
+		}
+	}
+
+	return err
 }
 
 func (wf *wfBase) Event(event sharefile.WebhookSubscriptionEvent) {

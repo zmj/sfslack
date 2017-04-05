@@ -26,7 +26,7 @@ func (login Login) doPost(ctx context.Context, url string, send, recv interface{
 	}
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return fmt.Errorf("Failed to create request: %v", err)
+		return fmt.Errorf("Failed to create post request: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	return login.do(ctx, req, recv)
@@ -39,10 +39,23 @@ func (login Login) doPatch(ctx context.Context, url string, send, recv interface
 	}
 	req, err := http.NewRequest("PATCH", url, body)
 	if err != nil {
-		return fmt.Errorf("Failed to create request: %v", err)
+		return fmt.Errorf("Failed to create patch request: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	return login.do(ctx, req, recv)
+}
+
+func (login *Login) doDelete(ctx context.Context, url string) error {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return fmt.Errorf("Failed to create delete request: %v", err)
+	}
+	err = login.do(ctx, req, nil)
+	// no no no
+	if err.Error() != "204 ACCEPTED" {
+		return err
+	}
+	return nil
 }
 
 func toBody(send interface{}) (io.Reader, error) {

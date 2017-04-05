@@ -50,6 +50,10 @@ func (c *Cache) New(cmd slack.Command, urls CallbackURLs) (*Runner, slack.Messag
 	c.put(r)
 	go r.run()
 	go r.sendReplies()
+	go func() {
+		<-r.done
+		c.del(r)
+	}()
 	// needs timeout? inside runner
 	return r, <-first
 }
@@ -60,4 +64,10 @@ func (c *Cache) put(r *Runner) {
 	c.wfID++
 	r.wfID = c.wfID
 	c.workflows[c.wfID] = r
+}
+
+func (c *Cache) del(r *Runner) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.workflows, r.wfID)
 }

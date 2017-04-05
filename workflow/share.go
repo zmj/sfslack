@@ -43,11 +43,11 @@ func getOrCreateSlackFolder(sf *sharefile.Login) (sharefile.Folder, error) {
 }
 
 func (wf *wfBase) subscribe(folder sharefile.Folder) error {
-	// save sub on base for cleanup
-	_, err := wf.sf.Subscribe(context.TODO(),
+	sub, err := wf.sf.Subscribe(context.TODO(),
 		folder,
 		wf.Host.EventCallbackURL(),
 		sharefile.OperationNameUpload)
+	wf.subscription = &sub
 	return err
 }
 

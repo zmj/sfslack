@@ -56,9 +56,9 @@ func (sf *Login) CreateSubscription(ctx context.Context, toCreate WebhookSubscri
 	return result, err
 }
 
-func (sf *Login) DeleteSubscription(ctx context.Context, id string) error {
-	url := sf.Account().itemURL("WebhookSubscriptions", id)
-	return sf.doPost(ctx, url, nil, nil)
+func (sf *Login) DeleteSubscription(ctx context.Context, subscriptionID string) error {
+	url := sf.Account().itemURL("WebhookSubscriptions", subscriptionID)
+	return sf.doDelete(ctx, url)
 }
 
 func (sf *Login) Subscribe(ctx context.Context, folder Folder, callbackURL string, eventTypes ...string) (WebhookSubscription, error) {
