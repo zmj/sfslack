@@ -124,6 +124,12 @@ func (login *login) Account() sharefile.Account {
 
 func (login *login) Do(req *http.Request) (*http.Response, error) {
 	req = login.withCredentials(req)
+	resp, err := login.client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusUnauthorized {
+		return resp, err
+	}
+	resp.Body.Close()
+	login.client.Jar = nil
+	req = login.withCredentials(req)
 	return login.client.Do(req)
-	// clear jar and reauth on unauthorized
 }
