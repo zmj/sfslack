@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"strconv"
+	"strings"
 )
 
 type Login struct {
@@ -52,10 +55,10 @@ func (login *Login) doDelete(ctx context.Context, url string) error {
 	}
 	err = login.do(ctx, req, nil)
 	// no no no
-	if err.Error() != "204 ACCEPTED" {
-		return err
+	if strings.HasPrefix(err.Error(), strconv.Itoa(http.StatusAccepted)) {
+		return nil
 	}
-	return nil
+	return err
 }
 
 func toBody(send interface{}) (io.Reader, error) {
@@ -80,8 +83,8 @@ func (login *Login) doGet(ctx context.Context, url string, recv interface{}) err
 
 func (login *Login) do(ctx context.Context, req *http.Request, recv interface{}) error {
 	// log.dbg this through context
-	// b, _ := httputil.DumpRequestOut(req, req.Method != "GET")
-	// fmt.Println(string(b))
+	b, _ := httputil.DumpRequestOut(req, req.Method != "GET")
+	fmt.Println(string(b))
 
 	resp, err := login.Do(req)
 	if err != nil {
@@ -89,8 +92,8 @@ func (login *Login) do(ctx context.Context, req *http.Request, recv interface{})
 	}
 	defer resp.Body.Close()
 
-	// b, _ = httputil.DumpResponse(resp, true)
-	// fmt.Println(string(b))
+	b, _ = httputil.DumpResponse(resp, true)
+	fmt.Println(string(b))
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
