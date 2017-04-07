@@ -67,9 +67,11 @@ type reply struct {
 func (r *replier) replyInner(re reply) {
 	r.mu.Lock()
 	cbs := r.waiting
-	r.waiting = nil
-	r.current = re
-	r.useCurrent = true
+	if re.msg.ResponseType == slack.ResponseTypeEphemeral {
+		r.waiting = nil
+		r.current = re
+		r.useCurrent = true
+	}
 	r.mu.Unlock()
 
 	var accepted bool
