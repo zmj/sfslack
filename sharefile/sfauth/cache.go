@@ -86,6 +86,7 @@ func (c *Cache) refreshLoop(key interface{}) {
 			}
 			fmt.Printf("%v refresh %v\n", time.Now().Format(time.Stamp), key)
 			login.token = token
+			login.client.Jar = nil // clear authid
 		}
 	}
 	c.mu.Lock()

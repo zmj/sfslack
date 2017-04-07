@@ -118,7 +118,9 @@ func (r *Runner) SetDefinition(values url.Values) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.def != nil {
-		// ok if same, redir
+		if r.def == def {
+			return nil
+		}
 		return fmt.Errorf("Already started workflow '%v'", r.def.Description)
 	}
 	r.def = def
