@@ -68,7 +68,7 @@ func (wf *sendWorkflow) Listen() error {
 	for {
 		select {
 		case <-wf.events:
-			notify = time.After(1 * time.Second)
+			notify = time.After(2 * time.Second)
 		case <-notify:
 			notify = nil
 			done = time.After(5 * time.Minute)
