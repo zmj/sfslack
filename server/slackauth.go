@@ -3,11 +3,22 @@ package server
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/zmj/sfslack/slack"
 )
 
 func (srv *server) slackAuth(wr http.ResponseWriter, req *http.Request) {
-	fmt.Printf("slack auth code %v\n", req.URL.Query().Get("code"))
-
+	code := slack.AppOAuthCode{
+		Code:         req.URL.Query().Get("code"),
+		ClientID:     srv.config.SlackOAuthID,
+		ClientSecret: srv.config.SlackOAuthSecret,
+	}
+	token, err := code.GetToken()
+	if err != nil {
+		http.Error(wr, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println(token)
 	// swap for slack team + bot oauth tokens
 	// save forever?
 }

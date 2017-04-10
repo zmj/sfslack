@@ -10,6 +10,8 @@ type Config struct {
 	SfOAuthID              string
 	SfOAuthSecret          string
 	SlackVerificationToken string
+	SlackOAuthID           string
+	SlackOAuthSecret       string
 }
 
 func (cfg *Config) validate() error {
@@ -18,10 +20,19 @@ func (cfg *Config) validate() error {
 		return fmt.Errorf("Missing port")
 	}
 	if cfg.SfOAuthID == "" {
-		return fmt.Errorf("Missing oauth id")
+		return fmt.Errorf("Missing ShareFile oauth id")
 	}
 	if cfg.SfOAuthSecret == "" {
-		return fmt.Errorf("Missing oauth secret")
+		return fmt.Errorf("Missing ShareFile oauth secret")
+	}
+	if cfg.SlackVerificationToken == "" {
+		return fmt.Errorf("Missing Slack verification token")
+	}
+	if cfg.SlackOAuthID == "" {
+		return fmt.Errorf("Missing Slack oauth id")
+	}
+	if cfg.SlackOAuthSecret == "" {
+		return fmt.Errorf("Missing Slack oauth secret")
 	}
 	return nil
 }
