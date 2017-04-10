@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 )
 
 const (
@@ -40,11 +41,15 @@ func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create token request: %v", err)
 	}
+	b, _ := httputil.DumpRequestOut(req, true)
+	fmt.Println(b)
 	hc := http.Client{}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Token request failed: %v", err)
 	}
+	b, _ = httputil.DumpResponse(resp, true)
+	fmt.Println(b)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Token request failed: %v", err)

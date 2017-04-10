@@ -20,6 +20,8 @@ func main() {
 	flag.StringVar(&cfg.SfOAuthID, "sfoauthid", "", "ShareFile OAuth Client ID")
 	flag.StringVar(&cfg.SfOAuthSecret, "sfoauthsecret", "", "ShareFile OAuth Client Secret")
 	flag.StringVar(&cfg.SlackVerificationToken, "slackverifytoken", "", "Slack command verification token")
+	flag.StringVar(&cfg.SlackOAuthID, "slackoauthid", "", "Slack App OAuth Client ID")
+	flag.StringVar(&cfg.SlackOAuthSecret, "slackoauthsecret", "", "Slack App OAuth Client Secret")
 	flag.Parse()
 	// validate before open log, not in server
 
