@@ -14,22 +14,22 @@ const (
 )
 
 type AppOAuthCode struct {
-	Code         string `json:code`
-	ClientID     string `json:client_id`
-	ClientSecret string `json:client_secret`
+	Code         string `json:"code"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 type AppOAuthToken struct {
-	AccessToken string        `json:access_token`
-	Scope       string        `json:scope`
-	TeamName    string        `json:team_name`
-	TeamID      string        `json:team_id`
-	Bot         BotOAuthToken `json:bot`
+	AccessToken string        `json:"access_token"`
+	Scope       string        `json:"scope"`
+	TeamName    string        `json:"team_name"`
+	TeamID      string        `json:"team_id"`
+	Bot         BotOAuthToken `json:"bot"`
 }
 
 type BotOAuthToken struct {
-	UserID      string `json:bot_user_id`
-	AccessToken string `json:bot_access_token`
+	UserID      string `json:"bot_user_id"`
+	AccessToken string `json:"bot_access_token"`
 }
 
 func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
@@ -42,14 +42,14 @@ func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
 		return nil, fmt.Errorf("Failed to create token request: %v", err)
 	}
 	b, _ := httputil.DumpRequestOut(req, true)
-	fmt.Println(b)
+	fmt.Println(string(b))
 	hc := http.Client{}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Token request failed: %v", err)
 	}
 	b, _ = httputil.DumpResponse(resp, true)
-	fmt.Println(b)
+	fmt.Println(string(b))
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Token request failed: %v", err)
