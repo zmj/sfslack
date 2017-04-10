@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httputil"
 	"strings"
 )
 
@@ -49,15 +48,11 @@ func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
 		return nil, fmt.Errorf("Failed to create token request: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	b, _ := httputil.DumpRequestOut(req, true)
-	fmt.Println(string(b))
 	hc := http.Client{}
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Token request failed: %v", err)
 	}
-	b, _ = httputil.DumpResponse(resp, true)
-	fmt.Println(string(b))
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("Token request failed: %v", err)

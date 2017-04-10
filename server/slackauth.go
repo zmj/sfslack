@@ -18,9 +18,8 @@ func (srv *server) slackAuth(wr http.ResponseWriter, req *http.Request) {
 		http.Error(wr, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println(token)
-	// swap for slack team + bot oauth tokens
-	// save forever?
+	srv.log.Info(fmt.Sprintf("Installed on %v", token.TeamName))
+	wr.Write([]byte("Thanks for installing ShareFile!"))
 }
 
 const buttonPageHTML = `<html><body>
