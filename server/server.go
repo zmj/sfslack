@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"net/http/httputil"
 
 	"github.com/zmj/sfslack/log"
 
@@ -81,7 +80,7 @@ func (srv *server) logErr(err error) {
 }
 
 func printReq(wr http.ResponseWriter, req *http.Request) {
-	bytes, _ := httputil.DumpRequest(req, true)
-	fmt.Println(string(bytes))
+	//bytes, _ := httputil.DumpRequest(req, true)
+	//fmt.Println(string(bytes))
 	http.Error(wr, "", http.StatusNotFound)
 }
