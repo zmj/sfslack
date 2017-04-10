@@ -73,8 +73,6 @@ func (wf *sendWorkflow) Listen() error {
 			notify = nil
 			done = time.After(5 * time.Minute)
 			newFiles, err := wf.getNewFiles()
-
-			fmt.Printf("wf.files %v newfiles %v\n", len(wf.files), len(newFiles))
 			if err != nil {
 				wf.err = fmt.Errorf("Failed to get info for upload notification: %v", err)
 				return wf.err
@@ -83,7 +81,6 @@ func (wf *sendWorkflow) Listen() error {
 				continue
 			}
 			wf.downloadShare, err = addToShare(wf.sf, wf.downloadShare, newFiles)
-			fmt.Printf("wf.shareid %v\n", wf.downloadShare.ID)
 			if err != nil {
 				wf.err = fmt.Errorf("Failed to make share for notification: %v", err)
 				return wf.err

@@ -72,6 +72,9 @@ func (wf *requestWorkflow) Listen() error {
 				wf.err = fmt.Errorf("Failed to get info for upload notification: %v", err)
 				return wf.err
 			}
+			if len(newFiles) == 0 {
+				continue
+			}
 			wf.downloadShare, err = addToShare(wf.sf, wf.downloadShare, newFiles)
 			if err != nil {
 				wf.err = fmt.Errorf("Failed to make share for notification: %v", err)
