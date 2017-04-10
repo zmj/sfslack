@@ -41,6 +41,7 @@ func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create token request: %v", err)
 	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	b, _ := httputil.DumpRequestOut(req, true)
 	fmt.Println(string(b))
 	hc := http.Client{}
