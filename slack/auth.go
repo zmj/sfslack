@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 )
 
 const (
@@ -33,10 +34,16 @@ type BotOAuthToken struct {
 }
 
 func (c AppOAuthCode) GetToken() (*AppOAuthToken, error) {
-	body, err := toBody(c)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to serialize code: %v", err)
+	values := map[string]string{
+		"code":          c.Code,
+		"client_id":     c.ClientID,
+		"client_secret": c.ClientSecret,
 	}
+	var valuePairs []string
+	for k, v := range values {
+		valuePairs = append(valuePairs, fmt.Sprintf("%v=%v", k, v))
+	}
+	body := strings.NewReader(strings.Join(valuePairs, "&"))
 	req, err := http.NewRequest("POST", oauthAccessURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create token request: %v", err)
