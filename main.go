@@ -3,13 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-
-	"github.com/zmj/sfslack/log"
-
 	"os"
-
 	"time"
 
+	"github.com/zmj/sfslack/log"
 	"github.com/zmj/sfslack/server"
 )
 
